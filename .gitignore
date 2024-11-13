@@ -16,6 +16,7 @@ db.sqlite3
 # Virtual environment
 venv/
 env/
+pyvenv.cfg
 
 # Byte-compiled / optimized / DLL files
 *.py[cod]
