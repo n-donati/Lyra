@@ -1,0 +1,1 @@
+# pass nodes of graph to determine for each one additional parameters: correlation with words like "leadership", "Taking responsibility", "Creating new value", "Reconciling tensions and dilemmas"
