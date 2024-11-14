@@ -10,6 +10,8 @@ from network_gen import generate_matrix
 from .models import * 
 from .utilities.extractCSV import extract_adjacency_matrix
 
+current_matrix = [[]]
+
 def get_matrix(student_id):
     adj_graph = []
     return_matrix = []
@@ -85,8 +87,8 @@ def read_csv(matrix, student):
     else:
         data = matrix
         
-    print(data)
-        
+    # print(data)
+    
     for i in range(len(matrix)):
         neuron = Neuron(
             size=0,
@@ -99,38 +101,39 @@ def read_csv(matrix, student):
         neuron.save()
         neuron_ids.append(neuron.id)
         
-        for i in range(len(matrix)):
-            for j in range(len(matrix[i])):
-                if j < len(matrix[i]) - 1:
-                    value = float(matrix[i][j])
-                    if i != j and value > 0:
-                        connection = Connection(
-                            neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
-                            con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
-                        )
-                        connection.save()
+    for i in range(len(matrix)):
+        for j in range(len(matrix[i])):
+            if j < len(matrix[i]) - 1:
+                value = float(matrix[i][j])
+                if i != j and value > 0:
+                    connection = Connection(
+                        neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
+                        con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
+                    )
+                    connection.save()
                     
-def process_matrix(matrix_data, student):
-    neuron_ids = []
+# def process_matrix(matrix_data, student):
+#     neuron_ids = []
     
-    matrix = Matrix(user_id=User.objects.get(id=student.id))
-    matrix.save()
+#     matrix = Matrix(user_id=User.objects.get(id=student.id))
+#     matrix.save()
     
     
-    for i, row in enumerate(matrix_data):
-        for j in range(len(row)):
-            value = float(row[j])
-            if i != j and value > 0:
-                connection = Connection(
-                    neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
-                    con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
-                )
-                connection.save()
+#     for i, row in enumerate(matrix_data):
+#         for j in range(len(row)):
+#             value = float(row[j])
+#             if i != j and value > 0:
+#                 connection = Connection(
+#                     neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
+#                     con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
+#                 )
+#                 connection.save()
 
 def home(request):
     return render(request, 'home.html')
 
 def view(request):
+    global current_matrix
     demo_students()
     students = User.objects.filter(role="STUDENT")
     
@@ -147,25 +150,23 @@ def view(request):
             student = User.objects.get(id=student_id)
             matrix = extract_adjacency_matrix(uploaded_file)
             read_csv(matrix, student)
-            matrix_data = json.load(uploaded_file)
-            process_matrix(matrix_data, student)
+            # matrix_data = json.load(uploaded_file)
+            # process_matrix(matrix_data, student)
         
         if request.POST.get('student_id'):
             student_id = request.POST.get('student_id')
-            get_matrix(student_id)
+            current_matrix = get_matrix(student_id)
+            draw_graph(request)
             return render(request, 'view.html', {"students": students, "student_id": student_id})
     
     return render(request, 'view.html', {"students": students})
 
 def graph(request):
+    global current_matrix
     try:
         # Generate a larger matrix with our desired parameters
-        matrix = generate_matrix(
-            size=81,          # 400 neurons
-            regions=18,        # 18 brain regions
-            local_density=0.08, # High within-region connectivity
-            distant_density=0.06 # Lower between-region connectivity
-        )
+        matrix = current_matrix
+        print(matrix)
         
         # Convert matrix to networkx graph
         G = nx.Graph(np.array(matrix))
