@@ -464,7 +464,7 @@ button svg {
 /* Response Display */
 .response-display {
     position: fixed;
-    top: 240px;  /* Position it below the color legend */
+    top: 340px;  /* Position it below the color legend */
     right: 20px;
     background: var(--color-bg-secondary);
     border: 1px solid rgba(255, 255, 255, 0.06);
