@@ -219,8 +219,7 @@ fetch('/graph/')
             .attr('text-anchor', 'middle')
             .style('fill', '#ffffff')
             .style('display', d => d.size > 20 ? 'block' : 'none') // Visibilidad inicial
-            .text(d => "TEXT");
-
+            .text(d => d.label);
 
         // Add glow filter
         const defs = svg.append('defs');

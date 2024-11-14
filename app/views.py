@@ -275,8 +275,9 @@ def graph(request):
                 'id': node,
                 'group': group_id,
                 'color': colors[group_id],
-                'size': 3 + (importance * 10),
-                'degree': degrees[node]
+                'size': 3 + (importance ** 2 * 30),
+                'degree': degrees[node],
+                'label': node
             })
         
         # Sort links by group connectivity
