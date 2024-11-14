@@ -20,41 +20,32 @@
       <div class="header-left">
         <a href="/" class="logo"> Network Visualizer </a>
         <nav class="nav-links">
-          <a href="#" onclick="toggleMenu()">Students</a>
+          <a href="#" onclick="toggleMenu()">Arquitectures</a>
           <a href="#">Analysis</a>
           <a href="#">Reports</a>
           <a href="#" onclick="toggleSettings()">Settings</a>
         </nav>
 
+        <!-- Place modals outside the sidebar for better structure -->
         <div id="sidebar-menu" class="sidebar">
-          {% for student in students %}
-          <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="student_id" value="{{ student.id }}" />
-            <button type="submit">{{ student.name }}</button>
-          </form>
-          <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="file" id="file" name="{{student.id}}.file" />
-            <button
-              type="submit"
-              class="btn btn-success btn-md mt-3 w-100 rounded-pill shadow"
-            >
-              Submit
-            </button>
-          </form>
-          <br />
-          {% endfor %}
-        </div>
+  <div id="matrixes">
+    {% for matrix in matrices %}
+      <button class="matrix-button" onclick="openModal('modal-{{ matrix.id }}')">{{ matrix.name }}</button>
+    {% endfor %}
+  </div>
+</div>
+
+
+        {% comment %} calificaciones {% endcomment %}
 
         <div id="settings-menu" class="settings" style="display: none;">
           <form method="POST" action="{% url 'settings_view' %}">
             {% csrf_token %}
-            <label for="selector">Choose an option:</label>
+            <label for="selector">Choose a theme:</label>
             <select id="selector" name="selector">
-              <option value="option1">Option 1</option>
-              <option value="option2">Option 2</option>
-              <option value="option3">Option 3</option>
+              <option value="option1">Dark</option>
+              <option value="option2">Light</option>
+              <option value="option3">MultiColor</option>
             </select>
             <button type="submit">Submit</button>
           </form>
@@ -79,6 +70,23 @@
         </button>
       </div>
     </header>
+
+{% for matrix in matrices %}
+  <div id="modal-{{ matrix.id }}" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('modal-{{ matrix.id }}')">&times;</span>
+      <h2>Upload File for {{ matrix.name }}</h2>
+      <form method="POST" enctype="multipart/form-data" action="{% url 'view' %}">
+        {% csrf_token %}
+        <input type="hidden" name="matrix_id" value="{{ matrix.id }}" />
+        <label for="file-{{ matrix.id }}">Choose a file:</label>
+        <input type="file" id="file-{{ matrix.id }}" name="file" required />
+        <button type="submit" class="submit-button">Upload File</button>
+      </form>
+    </div>
+  </div>
+{% endfor %}
+
     <div id="graph-container"></div>
     <script>
       feather.replace();
@@ -92,6 +100,41 @@
         const settings = document.getElementById("settings-menu");
         settings.style.display = settings.style.display === "block" ? "none" : "block";
       }
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = "block";
+        // Close sidebar when opening modal
+        document.getElementById("sidebar-menu").style.display = "none";
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    if (event.target.classList.contains("modal")) {
+        event.target.style.display = "none";
+    }
+}
+
+// Optional: Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape") {
+        const modals = document.getElementsByClassName("modal");
+        for (let modal of modals) {
+            modal.style.display = "none";
+        }
+    }
+});
+
+
     </script>
     <script src="{% static 'js/graph.js' %}"></script>
   </body>

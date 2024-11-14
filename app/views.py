@@ -8,17 +8,24 @@ from functools import lru_cache
 import numpy as np
 from sklearn.cluster import KMeans
 from .models import * 
+from django.contrib import messages
 
 
 def demo_students():
     if not User.objects.exists():
-        User.objects.bulk_create([
-            User(name="Edgar Martínez", role="STUDENT"),
-            User(name="André Robles", role="STUDENT"),
-            User(name="Nicolás Donati", role="STUDENT"),
-            User(name="Emily Costain", role="STUDENT"),
-            User(name="Nicolas de Alba", role="STUDENT"),
+        Matrix.objects.bulk_create([
+            Matrix(name="Secundaria Sotelo"),
+            Matrix(name="Carrera IFI"),
+            Matrix(name="Preparatoria CBTIS"),
+            Matrix(name="Universidad ITESM")
         ])
+        User.objects.bulk_create([
+            User(name="Juan", role="Student", matrix_id=Matrix.objects.get(name="Carrera IFI")),
+            User(name="Maria", role="Student", matrix_id=Matrix.objects.get(name="Carrera IFI")),
+            User(name="Pedro", role="Student", matrix_id=Matrix.objects.get(name="Preparatoria CBTIS")),
+            User(name="Ana", role="Student", matrix_id=Matrix.objects.get(name="Universidad ITESM"))
+        ])
+            
 
 @lru_cache(maxsize=1)
 def load_network():
@@ -84,28 +91,30 @@ def home(request):
     return render(request, 'home.html')
 
 def view(request):
-    global last_id
-    demo_students()
-    students = User.objects.filter(role="STUDENT")
+    try:
+        demo_students()
+    except:
+        pass
+    matrices = Matrix.objects.all()
+    users = User.objects.all()
     
     if request.method == 'POST':
-        student_id = None
-        uploaded_file = None
-        
-        for key, value in request.FILES.items():
-            if '.file' in key:
-                student_id = key.split('.')[0]  
-                uploaded_file = value
-                      
-        if student_id and uploaded_file:
-            student = User.objects.get(id=student_id)
-            read_csv(uploaded_file, student)
-        
-        if request.POST.get('student_id'):
-            student_id = request.POST.get('student_id')
-            return render(request, 'view.html', {"students": students, "student_id": student_id})
+        # Get matrix_id directly from POST data
+        matrix_id = request.POST.get('matrix_id')
+        uploaded_file = request.FILES.get('file')  # Get the uploaded file
+        if matrix_id and uploaded_file:
+            try:
+                matrix = Matrix.objects.get(id=matrix_id)
+                read_csv(uploaded_file, matrix)  # Your function to handle the CSV
+
+                messages.success(request, 'File uploaded successfully!')
+                return render(request, 'view.html', {}) # Redirect to a new URL or refresh
+            except Matrix.DoesNotExist:
+                messages.error(request, 'Matrix not found.')
+            except Exception as e:
+                messages.error(request, f'Error uploading file: {str(e)}')
     
-    return render(request, 'view.html', {"students": students})
+    return render(request, 'view.html', {"matrices": matrices}, {"users": users})
 
 def graph(request):
     try:
