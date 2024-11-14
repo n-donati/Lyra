@@ -1,0 +1,261 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Network Visualizer</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{% static 'css/view.css' %}" />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+  </head>
+  <body>
+    <header>
+      <div class="header-left">
+        <a href="/" class="logo"> Network Visualizer </a>
+        <nav class="nav-links">
+          <a href="#" onclick="toggleMenu()">Arquitectures</a>
+          <a href="#">Analysis</a>
+          <a href="#">Reports</a>
+          <a href="#" onclick="toggleSettings()">Settings</a>
+        </nav>
+
+        <!-- Place modals outside the sidebar for better structure -->
+        <div id="sidebar-menu" class="sidebar">
+  <div id="matrixes">
+    {% for matrix in matrices %}
+      <button class="matrix-button" onclick="openModal('modal-{{ matrix.id }}')">{{ matrix.name }}</button>
+    {% endfor %}
+  </div>
+</div>
+
+
+        {% comment %} calificaciones {% endcomment %}
+
+        <div id="settings-menu" class="settings" style="display: none;">
+          <form method="POST" action="{% url 'settings_view' %}">
+            {% csrf_token %}
+            <label for="selector">Choose a theme:</label>
+            <select id="selector" name="selector">
+              <option value="option1">Dark</option>
+              <option value="option2">Light</option>
+              <option value="option3">MultiColor</option>
+            </select>
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+      </div>
+      <div class="header-right">
+        <form id="searchForm" method="post" action="{% url 'view' %}" target="hidden-iframe">
+          {% csrf_token %}
+          <div class="search-container">
+            <i data-feather="search" class="search-icon"></i>
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Search nodes..."
+              name="message"
+            />
+          </div>
+        </form>
+        {% if gpt_response %}
+        <div class="gpt-response">
+          {{ gpt_response }}
+        </div>
+        {% endif %}
+        <iframe name="hidden-iframe" style="display:none;"></iframe>
+        <button id="resetZoom">
+          <i data-feather="maximize-2"></i>
+          <span>Reset View</span>
+        </button>
+        <button>
+          <i data-feather="share-2"></i>
+          <span>Share</span>
+        </button>
+      </div>
+    </header>
+
+{% for matrix in matrices %}
+  <div id="modal-{{ matrix.id }}" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('modal-{{ matrix.id }}')">&times;</span>
+      <h2>Upload File for {{ matrix.name }}</h2>
+      <form method="POST" enctype="multipart/form-data" action="{% url 'view' %}">
+        {% csrf_token %}
+        <input type="hidden" name="matrix_id" value="{{ matrix.id }}" />
+        <label for="file-{{ matrix.id }}">Choose a file:</label>
+        <input type="file" id="file-{{ matrix.id }}" name="{{matrix.id}}.file" required />
+        <button type="submit" class="submit-button">Upload File</button>
+      </form>
+    </div>
+  </div>
+{% endfor %}
+
+    <div id="graph-container">
+        <div class="color-legend">
+            <div class="legend-title">Regiones</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #3b82f6;"></div>
+                    <span>Leadership</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #10b981;"></div>
+                    <span>Rational</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #f59e0b;"></div>
+                    <span>Humanity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #ef4444;"></div>
+                    <span>Coolaborative</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #ef4444;"></div>
+                    <span>Artistic</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #f97316;"></div>
+                    <span>Economical</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #6366f1;"></div>
+                    <span>Environmental</span>
+                </div>
+                <div class="legend-item">
+                    <div class="color-dot" style="background: #8b5cf6;"></div>
+                    <span>Mathematical</span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="responseDisplay" class="response-display {% if not gpt_response %}hidden{% endif %}">
+            <div class="response-title">
+                <span>AI Response</span>
+                <span class="close-response" onclick="hideResponse()">×</span>
+            </div>
+            <div id="responseContent" class="response-content">
+                {% if gpt_response %}
+                    {{ gpt_response }}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="architecture-indicator">
+            <div class="architecture-title">Current Architecture</div>
+            <div class="architecture-content">
+                {{ matrix }}
+            </div>
+        </div>
+    </div>
+    <script>
+      feather.replace();  
+
+      function toggleMenu() {
+        const menu = document.getElementById("sidebar-menu");
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+      }
+
+      function toggleSettings() {
+        const settings = document.getElementById("settings-menu");
+        settings.style.display = settings.style.display === "block" ? "none" : "block";
+      }
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = "block";
+        // Close sidebar when opening modal
+        document.getElementById("sidebar-menu").style.display = "none";
+        // Clear any previous form data
+        const form = modal.querySelector('form');
+        if (form) form.reset();
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    if (event.target.classList.contains("modal")) {
+        event.target.style.display = "none";
+    }
+}
+
+// Optional: Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape") {
+        const modals = document.getElementsByClassName("modal");
+        for (let modal of modals) {
+            modal.style.display = "none";
+        }
+    }
+});
+
+// Add this to handle form submission
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch('{% url "view" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.response) {
+            showResponse(data.response);
+        }
+    });
+    
+    this.reset();
+});
+
+function showResponse(text) {
+    const display = document.getElementById('responseDisplay');
+    const content = document.getElementById('responseContent');
+    content.textContent = ''; // Clear existing content
+    display.classList.remove('hidden');
+    content.classList.add('typing');
+    
+    let i = 0;
+    const typingSpeed = 15;
+    const chunkSize = 2;
+    
+    function typeWriter() {
+        if (i < text.length) {
+            content.textContent += text.slice(i, i + chunkSize); // Add multiple characters
+            i += chunkSize;
+            setTimeout(typeWriter, typingSpeed);
+        } else {
+            content.classList.remove('typing');
+        }
+    }
+    
+    typeWriter();
+}
+
+function hideResponse() {
+    document.getElementById('responseDisplay').classList.add('hidden');
+}
+
+    </script>
+    <script src="{% static 'js/graph.js' %}"></script>
+  </body>
+</html>
