@@ -23,7 +23,7 @@
           <a href="#" onclick="toggleMenu()">Students</a>
           <a href="#">Analysis</a>
           <a href="#">Reports</a>
-          <a href="#">Settings</a>
+          <a href="#" onclick="toggleSettings()">Settings</a>
         </nav>
 
         <div id="sidebar-menu" class="sidebar">
@@ -45,6 +45,19 @@
           </form>
           <br />
           {% endfor %}
+        </div>
+
+        <div id="settings-menu" class="settings" style="display: none;">
+          <form method="POST" action="{% url 'settings_view' %}">
+            {% csrf_token %}
+            <label for="selector">Choose an option:</label>
+            <select id="selector" name="selector">
+              <option value="option1">Option 1</option>
+              <option value="option2">Option 2</option>
+              <option value="option3">Option 3</option>
+            </select>
+            <button type="submit">Submit</button>
+          </form>
         </div>
       </div>
       <div class="header-right">
@@ -69,13 +82,17 @@
     <div id="graph-container"></div>
     <script>
       feather.replace();
-    </script>
-    <script src="{% static 'js/graph.js' %}"></script>
-    <script>
+
       function toggleMenu() {
         const menu = document.getElementById("sidebar-menu");
         menu.style.display = menu.style.display === "block" ? "none" : "block";
       }
+
+      function toggleSettings() {
+        const settings = document.getElementById("settings-menu");
+        settings.style.display = settings.style.display === "block" ? "none" : "block";
+      }
     </script>
+    <script src="{% static 'js/graph.js' %}"></script>
   </body>
 </html>

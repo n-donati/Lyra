@@ -9,6 +9,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 from .models import * 
 
+
 def demo_students():
     if not User.objects.exists():
         User.objects.bulk_create([
@@ -184,3 +185,12 @@ def graph(request):
 def draw_graph(request):
     graph_data = graph(request)
     return render(request, 'view.html', {'graph_data': graph_data})
+
+def settings_view(request):
+    if request.method == 'POST':
+        selected_option = request.POST.get('selector')
+        print(f"Selected option: {selected_option}")
+        # Handle the selected option
+        # ...existing code...
+        print("ahuevo verga")
+    return render(request, 'view.html')
