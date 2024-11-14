@@ -6,7 +6,8 @@ def process_row(file_path):
     
     # Extract only the first row of column 'CE'
     # Since pandas uses zero-based indexing, ensure 'CE' is the correct label from your preview data.
-    data_in_ce = df.iloc[:, 82]  # Accessing data using column label 'CE' and row index 0 for the first row.
+    data_in_ce = df.iloc[:, 64]  # Accessing data using column label 'CE' and row index 0 for the first row.
+    calificaciones = df.iloc[:, 65]
     
     # Delete the first word from the cell in column 'CE'
     # Convert the cell to string, split it, and join it back excluding the first word
