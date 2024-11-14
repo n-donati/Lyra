@@ -261,7 +261,7 @@ fetch('/graph/')
             .attr('cy', d => d.y)
             .style('fill', d => {
                 const color = d3.color(d.color);
-                color.opacity = 0.7;
+                color.opacity = d.opacity;
                 return color.toString();
             })
             .style('filter', 'url(#glow)');
