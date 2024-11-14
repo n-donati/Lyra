@@ -242,7 +242,7 @@ def graph(request):
         
         # Preparar la matriz para clustering
         adj_matrix = nx.to_numpy_array(G)
-        n_clusters = min(18, len(matrix))  # Ajustar el número de clusters
+        n_clusters = min(8, len(matrix))  # Ajustar el número de clusters
         
         # Clustering
         kmeans = KMeans(n_clusters=n_clusters, random_state=42)
@@ -250,12 +250,9 @@ def graph(request):
         
         # Definir una paleta de colores
         colors = [
-            '#FF00FF', '#FF33FF', '#FF66FF',  # Neon pinks
-            '#00FFFF', '#33FFFF', '#66FFFF',  # Neon cyans
-            '#00FF00', '#33FF33', '#66FF66',  # Neon greens
-            '#FFFF00', '#FFFF33', '#FFFF66',  # Neon yellows
-            '#FF6600', '#FF9933', '#FFCC66',  # Neon oranges
-            '#6600FF', '#9933FF', '#CC66FF'   # Neon purples
+            '#3b82f6', '#10b981', '#f59e0b',  # Neon pinks
+            '#ef4444', '#ef4444', '#f97316',  # Neon cyans
+            '#6366f1', '#8b5cf6'
         ]
         
         # Crear nodos
