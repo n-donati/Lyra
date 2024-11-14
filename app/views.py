@@ -1,4 +1,3 @@
-import csv
 from io import StringIO
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
@@ -8,7 +7,40 @@ from functools import lru_cache
 import numpy as np
 from sklearn.cluster import KMeans
 from .models import * 
+from .utilities.extractCSV import extract_adjacency_matrix
 
+def get_matrix(student_id):
+    adj_graph = []
+    return_matrix = []
+    
+    matrix = Matrix.objects.get(user_id=student_id)
+    nodes = Neuron.objects.filter(matrix_id=matrix)
+    
+    for i in range(len(nodes)):
+        adj_graph.append([])
+        connections = Connection.objects.filter(neuron_id=nodes[i])
+        for j in range(len(connections)):
+            adj_graph[i].append(connections[j].con_neuron_id.id)
+    
+    # print(len(nodes))
+    # print(len(adj_graph))
+    
+    for i in range(len(nodes)):
+        k = 0
+        return_matrix.append([])
+        for j in range(len(nodes)):
+            if i == j:
+                return_matrix[i].append(0)
+            elif k >= len(adj_graph[i]) - 1:
+                return_matrix[i].append(0)
+            elif Neuron.objects.get(id=adj_graph[i][k]).neuron_no == j:
+                return_matrix[i].append(1)
+                k+=1
+            else:
+                return_matrix[i].append(0)
+                
+    return return_matrix
+        
 
 def demo_students():
     if not User.objects.exists():
@@ -42,49 +74,46 @@ def load_network():
     except:
         return None, [], {}, {}
 
-def read_csv(file, student):
+def read_csv(matrix, student):
     neuron_ids = []
     
-    try:
-        csv_file_content = file.read().decode('utf-8-sig')  
-    except UnicodeDecodeError:
-        csv_file_content = file.read().decode('utf-8')
+    m = Matrix(user_id=User.objects.get(id=student.id))
+    m.save()
     
-    csv_data = StringIO(csv_file_content)
-    reader = csv.reader(csv_data)
-    
-    matrix = Matrix(user_id=User.objects.get(id=student.id))
-    matrix.save()
-    
-    for i, row in enumerate(reader):
+    if isinstance(matrix, Matrix):
+        data = matrix.get_data()  
+    else:
+        data = matrix
+        
+    print(data)
+        
+    for i in range(len(matrix)):
         neuron = Neuron(
             size=0,
             color="Color",
             opacity=0.0,
-            matrix_id=matrix, 
-            neuron_no=i
+            matrix_id=m, 
+            neuron_no=i,
+            name=matrix[i][len(matrix)]
         )
         neuron.save()
         neuron_ids.append(neuron.id)
         
-    csv_data.seek(0)
-    reader = csv.reader(csv_data)
-    
-    for i, row in enumerate(reader):
-        for j in range(len(row)):
-            value = float(row[j])
-            if i != j and value > 0:
-                connection = Connection(
-                    neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
-                    con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
-                )
-                connection.save()
+    for i in range(len(matrix)):
+        for j in range(len(matrix[i])):
+            if j < len(matrix[i]) - 1:
+                value = float(matrix[i][j])
+                if i != j and value > 0:
+                    connection = Connection(
+                        neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
+                        con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
+                    )
+                    connection.save()
 
 def home(request):
     return render(request, 'home.html')
 
 def view(request):
-    global last_id
     demo_students()
     students = User.objects.filter(role="STUDENT")
     
@@ -99,10 +128,12 @@ def view(request):
                       
         if student_id and uploaded_file:
             student = User.objects.get(id=student_id)
-            read_csv(uploaded_file, student)
+            matrix = extract_adjacency_matrix(uploaded_file)
+            read_csv(matrix, student)
         
         if request.POST.get('student_id'):
             student_id = request.POST.get('student_id')
+            get_matrix(student_id)
             return render(request, 'view.html', {"students": students, "student_id": student_id})
     
     return render(request, 'view.html', {"students": students})

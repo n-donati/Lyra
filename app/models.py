@@ -14,6 +14,7 @@ class Matrix(models.Model):
         return "Matrix" + self.user_id
 
 class Neuron(models.Model):
+    name = models.CharField(max_length=100, default="")
     color = models.CharField(max_length=100)
     size = models.FloatField()
     opacity = models.FloatField()
@@ -28,6 +29,6 @@ class Connection(models.Model):
     con_neuron_id = models.ForeignKey(Neuron, related_name="con_neuron_connections", on_delete=models.CASCADE)
     
     def __str__(self):
-        return self.neuron_id + self.con_neuron_id
+        return "Neurons"
     
     
