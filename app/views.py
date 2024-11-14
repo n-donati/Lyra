@@ -251,12 +251,11 @@ def graph(request):
         
         # Definir una paleta de colores
         colors = [
-            '#FF00FF', '#FF33FF', '#FF66FF',  # Neon pinks
-            '#00FFFF', '#33FFFF', '#66FFFF',  # Neon cyans
-            '#00FF00', '#33FF33', '#66FF66',  # Neon greens
-            '#FFFF00', '#FFFF33', '#FFFF66',  # Neon yellows
-            '#FF6600', '#FF9933', '#FFCC66',  # Neon oranges
-            '#6600FF', '#9933FF', '#CC66FF'   # Neon purples
+            '#FF00FF', '#FF33FF', '#FF66FF',
+            '#00FFFF', '#33FFFF', '#66FFFF',
+            '#00FF00', '#33FF33', '#66FF66',
+            '#FF6600', '#FF9933', '#FFCC66',
+            '#6600FF', '#9933FF', '#CC66FF'
         ]
         
         # Crear nodos
@@ -269,7 +268,7 @@ def graph(request):
         range = max(opacities) - min(opacities)
         for node in G.nodes():
             opacity = Neuron.objects.get(id=i).opacity
-            opacity = opacity * range / 100
+            opacity = opacity * range / 1000
             print(type(Neuron.objects.get(id=i).opacity))
             print(Neuron.objects.get(id=i).opacity)
             print("opacity", opacity, "\n\n")
