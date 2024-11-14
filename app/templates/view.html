@@ -52,7 +52,8 @@
         </div>
       </div>
       <div class="header-right">
-        <form method="post" action="{% url 'view' %}" onsubmit="event.preventDefault(); if(event.target.querySelector('.search-input').value.trim()) this.submit();">
+        <form id="searchForm" method="post" action="{% url 'view' %}" target="hidden-iframe">
+          {% csrf_token %}
           <div class="search-container">
             <i data-feather="search" class="search-icon"></i>
             <input
@@ -63,6 +64,12 @@
             />
           </div>
         </form>
+        {% if gpt_response %}
+        <div class="gpt-response">
+          {{ gpt_response }}
+        </div>
+        {% endif %}
+        <iframe name="hidden-iframe" style="display:none;"></iframe>
         <button id="resetZoom">
           <i data-feather="maximize-2"></i>
           <span>Reset View</span>
@@ -84,13 +91,7 @@
         <input type="hidden" name="matrix_id" value="{{ matrix.id }}" />
         <label for="file-{{ matrix.id }}">Choose a file:</label>
         <input type="file" id="file-{{ matrix.id }}" name="file" required />
-        <button type="submit" class="submit-button">Upload File</button>
-      </form>
-    </div>
-  </div>
-{% endfor %}
-
-    <div class="color-legend">
+        <button type="submit" class="submit-button">Upload File</    <div class="color-legend">
         <div class="legend-title">Node Types</div>
         <div class="legend-items">
             <div class="legend-item">
@@ -112,6 +113,12 @@
         </div>
     </div>
 
+button>
+      </form>
+    </div>
+  </div>
+{% endfor %}
+
     <div id="graph-container"></div>
     <script>
       feather.replace();
@@ -132,6 +139,9 @@ function openModal(modalId) {
         modal.style.display = "block";
         // Close sidebar when opening modal
         document.getElementById("sidebar-menu").style.display = "none";
+        // Clear any previous form data
+        const form = modal.querySelector('form');
+        if (form) form.reset();
     }
 }
 
@@ -159,6 +169,12 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
+// Add this to handle form submission
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    this.submit();
+    this.reset();
+});
 
     </script>
     <script src="{% static 'js/graph.js' %}"></script>
