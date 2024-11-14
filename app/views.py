@@ -126,29 +126,34 @@ def read_csv(file, student):
                 connection.save()
 
 def upload_to_database(adjacency_matrix, matrix_id):
+    print(adjacency_matrix.shape)
     matrix = Matrix.objects.get(id=matrix_id)  # Retrieve the matrix instance by ID
-
+    neuron_mapping = {}
     # Create neurons for each row in the adjacency matrix
-    neurons = []
-    for i in range(len(adjacency_matrix)):
+    # neurons = []
+    count = 0
+    for name in adjacency_matrix.columns:
         neuron = Neuron(
+            name=name,  # Use the name from the adjacency matrix
             color="Color",  # Example placeholder
             size=1.0,       # Example placeholder
             opacity=1.0,    # Example placeholder
-            neuron_no=i,
+            neuron_no= count,  # Optional, for indexing
             matrix_id=matrix
         )
+        count += 1
         neuron.save()
-        neurons.append(neuron)
+        # neurons.append(neuron)
+        neuron_mapping[name] = neuron  
 
     # Create connections based on the adjacency matrix
-    for i, row in enumerate(adjacency_matrix):
-        for j, value in enumerate(row):
-            print(value)
-            if i != j and int(value) > 0:  # Create connection only if there is a relation and not to self
+    for i, row_name in enumerate(adjacency_matrix.index):
+        for j, col_name in enumerate(adjacency_matrix.columns):
+            value = adjacency_matrix.iat[i, j]
+            if row_name != col_name and int(value) > 0:  # Only create if there is a relation and not self
                 connection = Connection(
-                    neuron_id=neurons[i],
-                    con_neuron_id=neurons[j]
+                    neuron_id=neuron_mapping[row_name],     # Get neuron by name
+                    con_neuron_id=neuron_mapping[col_name]  # Get connected neuron by name
                 )
                 connection.save()
 
@@ -162,7 +167,7 @@ def view(request):
     matrices = Matrix.objects.all()
     
     if request.method == 'POST':
-        student_id = None
+        matrix_id = None
         uploaded_file = None
         
         for key, value in request.FILES.items():
