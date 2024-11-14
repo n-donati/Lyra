@@ -1,5 +1,6 @@
 from io import StringIO
 import json
+from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from django.http import JsonResponse
 import networkx as nx
@@ -12,8 +13,16 @@ from .models import *
 from .utilities.extractCSV import extract_adjacency_matrix
 from django.contrib import messages
 from .utilities.extractCSV import extract_adjacency_matrix
+from .openai import ChatGPT
 
-current_matrix = [[]]
+# @csrf_exempt
+# def generate_response(request):
+#     if request.method == 'POST':
+#         message = request.POST.get('message')
+#         chatgpt = ChatGPT()  # No need to pass the API key here
+#         response = chatgpt.get_response(message)  # Changed from generate_response to get_response
+#         return JsonResponse({'response': response})
+
 
 def get_matrix(student_id):
     adj_graph = []
@@ -169,6 +178,7 @@ def upload_to_database(adjacency_matrix, matrix_id):
 def home(request):
     return render(request, 'home.html')
 
+@csrf_exempt
 def view(request):
     # global current_matrix
     # demo_students()
@@ -203,6 +213,12 @@ def view(request):
     users = User.objects.all()
     
     if request.method == 'POST':
+        if request.POST.get('message'):
+            message = request.POST.get('message')
+            chatgpt = ChatGPT()  
+            response = chatgpt.get_response(message)
+            print(response)
+        
         # Get matrix_id directly from POST data
         matrix_id = request.POST.get('matrix_id')
         uploaded_file = request.FILES.get('file')  # Get the uploaded file

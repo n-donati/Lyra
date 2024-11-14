@@ -52,14 +52,18 @@
         </div>
       </div>
       <div class="header-right">
-        <div class="search-container">
-          <i data-feather="search" class="search-icon"></i>
-          <input
-            type="text"
-            class="search-input"
-            placeholder="Search nodes..."
-          />
-        </div>
+        <form method="post" action="{% url 'view' %}">
+          <div class="search-container">
+            <i data-feather="search" class="search-icon"></i>
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Search nodes..."
+              name="message"
+            />
+          </div>
+          <button type="submit">Submit</button>
+        </form>
         <button id="resetZoom">
           <i data-feather="maximize-2"></i>
           <span>Reset View</span>
