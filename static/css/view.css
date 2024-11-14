@@ -460,3 +460,83 @@ button svg {
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Response Display */
+.response-display {
+    position: fixed;
+    top: 240px;  /* Position it below the color legend */
+    right: 20px;
+    background: var(--color-bg-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 20px;
+    min-width: 200px;
+    max-width: 300px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-md);
+    z-index: var(--z-header);
+    transition: var(--transition-default);
+}
+
+.response-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.response-content {
+    font-size: 0.813rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.4;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.response-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.response-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.response-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.close-response {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.close-response:hover {
+    opacity: 1;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Typing effect styles */
+.typing {
+    border-right: 2px solid var(--color-accent-primary);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    animation: blink 0.75s step-end infinite;
+}
+
+@keyframes blink {
+    from, to { border-color: transparent }
+    50% { border-color: var(--color-accent-primary) }
+}

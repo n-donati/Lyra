@@ -119,6 +119,18 @@
                 </div>
             </div>
         </div>
+        
+        <div id="responseDisplay" class="response-display {% if not gpt_response %}hidden{% endif %}">
+            <div class="response-title">
+                <span>AI Response</span>
+                <span class="close-response" onclick="hideResponse()">×</span>
+            </div>
+            <div id="responseContent" class="response-content">
+                {% if gpt_response %}
+                    {{ gpt_response }}
+                {% endif %}
+            </div>
+        </div>
     </div>
     <script>
       feather.replace();
@@ -172,9 +184,53 @@ document.addEventListener('keydown', function(event) {
 // Add this to handle form submission
 document.getElementById('searchForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    this.submit();
+    const formData = new FormData(this);
+    
+    fetch('{% url "view" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.response) {
+            showResponse(data.response);
+        }
+    });
+    
     this.reset();
 });
+
+function showResponse(text) {
+    const display = document.getElementById('responseDisplay');
+    const content = document.getElementById('responseContent');
+    content.textContent = ''; // Clear existing content
+    display.classList.remove('hidden');
+    content.classList.add('typing');
+    
+    let i = 0;
+    const typingSpeed = 15; // Reduced from 25 to 15ms for faster typing
+    const chunkSize = 2;   // Added: type 2 characters at once
+    
+    function typeWriter() {
+        if (i < text.length) {
+            content.textContent += text.slice(i, i + chunkSize); // Add multiple characters
+            i += chunkSize;
+            setTimeout(typeWriter, typingSpeed);
+        } else {
+            content.classList.remove('typing');
+        }
+    }
+    
+    typeWriter();
+}
+
+function hideResponse() {
+    document.getElementById('responseDisplay').classList.add('hidden');
+}
 
     </script>
     <script src="{% static 'js/graph.js' %}"></script>
