@@ -1,10 +1,23 @@
+import csv
+from io import StringIO
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 import networkx as nx
 import pandas as pd
 from functools import lru_cache
 import numpy as np
 from sklearn.cluster import KMeans
+from .models import * 
+
+def demo_students():
+    if not User.objects.exists():
+        User.objects.bulk_create([
+            User(name="Edgar Martínez", role="STUDENT"),
+            User(name="André Robles", role="STUDENT"),
+            User(name="Nicolás Donati", role="STUDENT"),
+            User(name="Emily Costain", role="STUDENT"),
+            User(name="Nicolas de Alba", role="STUDENT"),
+        ])
 
 @lru_cache(maxsize=1)
 def load_network():
@@ -28,14 +41,66 @@ def load_network():
     except:
         return None, [], {}, {}
 
+def read_csv(file):
+    neuron_ids = []
+    
+    try:
+        csv_file_content = file.read().decode('utf-8-sig')  
+    except UnicodeDecodeError:
+        csv_file_content = file.read().decode('utf-8')
+    
+    csv_data = StringIO(csv_file_content)
+    reader = csv.reader(csv_data)
+    
+    matrix = Matrix(user_id=User.objects.create())
+    matrix.save()
+    
+    for i, row in enumerate(reader):
+        neuron = Neuron(
+            size=0,
+            color="Color",
+            opacity=0.0,
+            matrix_id=matrix, 
+            neuron_no=i
+        )
+        neuron.save()
+        neuron_ids.append(neuron.id)
+        
+    csv_data.seek(0)
+    reader = csv.reader(csv_data)
+    
+    for i, row in enumerate(reader):
+        for j in range(len(row)):
+            value = float(row[j])
+            if i != j and value > 0:
+                connection = Connection(
+                    neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
+                    con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
+                )
+                connection.save()
+
 def home(request):
+    if request.method == 'POST' and request.FILES['file']:
+        csv_file = request.FILES['file']
+        
+        if(csv_file):
+            read_csv(csv_file)
+        
     return render(request, 'home.html')
 
 def view(request):
-    return render(request, 'view.html')
+    demo_students()
+    students = User.objects.filter(role="STUDENT")
+    
+    if request.method == 'POST':
+        student_id = request.POST.get('student_id')
+        return render(request, 'view.html', {"students": students, "student_id": student_id})
+    
+    return render(request, 'view.html', {"students": students})
 
 def graph(request):
     try:
+        
         df = pd.read_csv('data/network.csv')
         G = nx.Graph()
         

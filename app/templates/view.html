@@ -19,11 +19,21 @@
                 Network Visualizer
             </a>
             <nav class="nav-links">
-                <a href="#">Dashboard</a>
+                <a href="#" onclick="toggleMenu()">Students</a>
                 <a href="#">Analysis</a>
                 <a href="#">Reports</a>
                 <a href="#">Settings</a>
             </nav>
+
+            <div id="sidebar-menu" class="sidebar" enctype="multipart/form-data">
+                {% for student in students %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="student_id" value="{{ student.id }}">
+                    <button type="submit">{{ student.name }}</button>
+                </form>
+                {% endfor %}
+            </div>
         </div>
         <div class="header-right">
             <div class="search-container">
@@ -45,5 +55,11 @@
         feather.replace();
     </script>
     <script src="{% static 'js/graph.js' %}"></script>
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('sidebar-menu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
 </body>
 </html>

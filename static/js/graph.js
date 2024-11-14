@@ -234,4 +234,4 @@ document.getElementById('resetZoom').addEventListener('click', () => {
 });
 
 // Update initial zoom to show the entire universe with more space
-svg.call(zoom.transform, d3.zoomIdentity.translate(width/2, height/2).scale(0.25));
+svg.call(zoom.transform, d3.zoomIdentity.translate(0, 0).scale(0.8));
