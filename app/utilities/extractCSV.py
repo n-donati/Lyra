@@ -6,7 +6,7 @@ import numpy as np
 
 def extract_adjacency_matrix(file_path):
     # Load the Excel file
-    df = pd.read_excel(file_path, sheet_name='LEM')
+    df = pd.read_excel(file_path)
     
     # Extract the adjacency matrix
     adjacency_matrix = df.values
@@ -15,7 +15,7 @@ def extract_adjacency_matrix(file_path):
 
 def process_first_column(file_path):
     # Load the Excel file
-    df = pd.read_excel(file_path, sheet_name='LEM')
+    df = pd.read_excel(file_path)
     
     # Extract text from the first column and delete the first word
     first_column = df.iloc[:, 0].apply(lambda x: ' '.join(str(x).split(' ')[1:]))
@@ -23,8 +23,6 @@ def process_first_column(file_path):
     return first_column
 
 def extract_adjacency_matrix(file_path):
-    adjacency_matrix = extract_adjacency_matrix(file_path)
-    print(adjacency_matrix)
 
     first_column_processed = process_first_column(file_path)
     print(first_column_processed.dtypes)
@@ -62,5 +60,5 @@ def extract_adjacency_matrix(file_path):
     return adjacency_matrix
 
 
-file_path = 'LEM.xlsm'
+file_path = 'arquitectura1.xlsx'
 extract_adjacency_matrix(file_path)
