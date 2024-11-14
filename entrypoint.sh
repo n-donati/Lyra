@@ -3,6 +3,7 @@
 export PORT=${PORT:-8000}
 
 python manage.py collectstatic --noinput
+python manage.py flush --noinput
 python manage.py makemigrations app
 python manage.py makemigrations
 python manage.py migrate
