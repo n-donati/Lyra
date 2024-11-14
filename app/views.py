@@ -195,6 +195,12 @@ def view(request):
     matrices = Matrix.objects.all()
     
     if request.method == 'POST':
+        if request.POST.get('message'):
+            message = request.POST.get('message')
+            chatgpt = ChatGPT()  
+            response = chatgpt.get_response(message)
+            print(response)
+        
         matrix_id = None
         uploaded_file = None
         
@@ -267,6 +273,7 @@ def graph(request):
         max_importance = max((degrees[node] * 0.5 + betweenness[node] * 0.5) 
                            for node in G.nodes())
         
+        i = 1
         for node in G.nodes():
             group_id = int(clusters[node])
             importance = (degrees[node] * 0.5 + betweenness[node] * 0.5) / max_importance
@@ -276,8 +283,9 @@ def graph(request):
                 'color': colors[group_id],
                 'size': 3 + (importance ** 2 * 30),
                 'degree': degrees[node],
-                'label': node
+                'label': Neuron.objects.get(id=i).name
             })
+            i+=1
         
         # Create links
         links = []
