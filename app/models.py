@@ -15,7 +15,7 @@ class User(models.Model):
         return self.name
 
 class Neuron(models.Model):
-    name = models.CharField(max_length=100, default="")
+    name = models.CharField(max_length=100, default="Neuron")
     color = models.CharField(max_length=100)
     size = models.FloatField()
     opacity = models.FloatField()
