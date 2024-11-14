@@ -46,7 +46,7 @@ def get_matrix(student_id):
                 k+=1
             else:
                 return_matrix[i].append(0)
-    print("RETURN MATRIX", return_matrix)
+    # print("RETURN MATRIX", return_matrix)
                 
     return return_matrix
 
@@ -192,6 +192,7 @@ def view(request):
     users = User.objects.all()
     matrices = Matrix.objects.all()
     context = {"matrices": matrices, "users": users}
+    matrix = ""
     
     if request.method == 'POST':
         if request.POST.get('message'):
@@ -217,7 +218,12 @@ def view(request):
                 upload_to_database(adjacency_matrix, matrix_id)
                 current_matrix = get_matrix(matrix_id)
                 draw_graph(request)
-            
+                matrix = Matrix.objects.get(id=matrix_id)
+                context = {"matrices": matrices, "users": users, "matrix": matrix}
+
+                #     return JsonResponse({'matrix': matrix})
+                # context['matrix'] = matrix
+                
             # if request.POST.get('student_id'):
             #     matrix_id = request.POST.get('student_id')
             #     current_matrix = get_matrix(matrix_id)
@@ -240,25 +246,26 @@ def view(request):
 def graph(request):
     global current_matrix
     try:
-        # Generate a larger matrix with our desired parameters
+        # Cargar y preparar la matriz de adyacencia actual
         matrix = current_matrix
+        G = nx.Graph(np.array(matrix))  # Crear el grafo desde la matriz de adyacencia
         
-        # Convert matrix to networkx graph
-        G = nx.Graph(np.array(matrix))
+        # Generar un layout de red para distribuir los nodos
+        pos = nx.spring_layout(G, seed=42)  # Usar spring_layout para una disposición compacta
         
-        # Calculate node metrics
+        # Calcular métricas para los nodos
         degrees = dict(G.degree())
         betweenness = nx.betweenness_centrality(G)
         
-        # Create adjacency matrix for clustering
+        # Preparar la matriz para clustering
         adj_matrix = nx.to_numpy_array(G)
-        n_clusters = min(18, len(matrix))  # Adjust clusters based on matrix size
+        n_clusters = min(18, len(matrix))  # Ajustar el número de clusters
         
-        # Perform clustering
+        # Clustering
         kmeans = KMeans(n_clusters=n_clusters, random_state=42)
         clusters = kmeans.fit_predict(adj_matrix)
         
-        # Color palette remains the same
+        # Definir una paleta de colores
         colors = [
             '#FF00FF', '#FF33FF', '#FF66FF',  # Neon pinks
             '#00FFFF', '#33FFFF', '#66FFFF',  # Neon cyans
@@ -268,31 +275,34 @@ def graph(request):
             '#6600FF', '#9933FF', '#CC66FF'   # Neon purples
         ]
         
-        # Create nodes
+        # Crear nodos
         nodes = []
         max_importance = max((degrees[node] * 0.5 + betweenness[node] * 0.5) 
-                           for node in G.nodes())
+                             for node in G.nodes())
         
         i = 1
         for node in G.nodes():
             group_id = int(clusters[node])
             importance = (degrees[node] * 0.5 + betweenness[node] * 0.5) / max_importance
             nodes.append({
-                'id': node + 1,  # Add 1 to match the JS expectation
+                'id': node + 1,
                 'group': group_id,
-                'color': colors[group_id],
-                'size': 3 + (importance ** 2 * 30),
+                'color': colors[group_id % len(colors)],
+                'size': 3 + (importance ** 2 * 10),
                 'degree': degrees[node],
-                'label': Neuron.objects.get(id=i).name
+                'label': Neuron.objects.get(id=i).name,
+                'font_size': "2px",
+                'x': pos[node][0] * 1000,  # Usar posiciones del layout
+                'y': pos[node][1] * 1000
             })
-            i+=1
+            i += 1
         
-        # Create links
+        # Crear enlaces
         links = []
         for u, v in G.edges():
             links.append({
-                'source': u + 1,  # Add 1 to match the JS expectation
-                'target': v + 1,  # Add 1 to match the JS expectation
+                'source': u + 1,
+                'target': v + 1,
                 'value': 1 if clusters[u] == clusters[v] else 0.5
             })
         

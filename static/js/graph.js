@@ -272,12 +272,41 @@ fetch('/graph/')
             .join('text')
             .attr('class', 'node-label')
             .attr('x', d => d.x)
-            .attr('y', d => d.y - d.size - 5) // Ajuste para que el texto esté encima del círculo
+            .attr('y', d => d.y)
             .attr('text-anchor', 'middle')
             .style('fill', '#ffffff')
-            .style('display', d => d.size > 20 ? 'block' : 'none') // Visibilidad inicial
-            .text(d => d.label);
+            .style('font-size', d => d.size * 0.2) // Ajusta el tamaño del texto a algo más pequeño
+            .style('display', d => d.size > 20 ? 'block' : 'none'); // Visibilidad inicial
+        
+        // Divide el texto en múltiples líneas con cada dos palabras y ajusta el interlineado dinámicamente
+        nodeLabels.each(function(d) {
+            const words = d.label.split(" "); // Divide el nombre en palabras
+            const lines = [];
 
+            // Agrupa cada dos palabras
+            for (let i = 0; i < words.length; i += 2) {
+                lines.push(words.slice(i, i + 2).join(" ")); // Une dos palabras
+            }
+
+            // Ajusta el tamaño de la fuente (puedes ajustar el valor según tus preferencias)
+            const fontSize = d.size * 0.2; // Tamaño de fuente en píxeles
+            const lineHeight = fontSize * 0.9; // Ajuste de interlineado basado en tamaño de fuente (20% adicional)
+
+            // Añade cada línea al nodo con interlineado dinámico
+            lines.forEach((line, i) => {
+                d3.select(this)
+                    .append("tspan")
+                    .attr("x", d.x)
+                    .attr("y", d.y + i * lineHeight - ((lines.length - 1) * lineHeight) / 2) // Centra verticalmente
+                    .style("font-size", `${fontSize}px`) // Aplica el tamaño de fuente
+                    .text(line);
+            });
+        });
+
+
+        //
+        //
+        //
         // Add glow filter
         const defs = svg.append('defs');
         const filter = defs.append('filter')
