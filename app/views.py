@@ -8,11 +8,9 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from functools import lru_cache
-from network_gen import generate_matrix
 from .models import * 
 from .utilities.extractCSV import extract_adjacency_matrix
 from django.contrib import messages
-from .utilities.extractCSV import extract_adjacency_matrix
 from .openai import ChatGPT
 import json
 
@@ -193,14 +191,17 @@ def view(request):
     demo_students()
     users = User.objects.all()
     matrices = Matrix.objects.all()
+    context = {"matrices": matrices, "users": users}
     
     if request.method == 'POST':
         if request.POST.get('message'):
             message = request.POST.get('message')
             chatgpt = ChatGPT()  
-            response = chatgpt.get_response(message)
-            print(response)
-        
+            gpt_response = chatgpt.get_response(message)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'response': gpt_response})
+            context['gpt_response'] = gpt_response
+            
         matrix_id = None
         uploaded_file = None
         
@@ -234,14 +235,13 @@ def view(request):
 
                 # messages.success(request, 'File uploaded successfully!')
                 # return render(request, 'view.html', {"matrices": matrices, "users": users}) # Redirect to a new URL or refresh
-    return render(request, 'view.html', {"matrices": matrices, "users": users})
+    return render(request, 'view.html', context)
 
 def graph(request):
     global current_matrix
     try:
         # Generate a larger matrix with our desired parameters
         matrix = current_matrix
-        print(matrix)
         
         # Convert matrix to networkx graph
         G = nx.Graph(np.array(matrix))
@@ -313,8 +313,5 @@ def draw_graph(request):
 def settings_view(request):
     if request.method == 'POST':
         selected_option = request.POST.get('selector')
-        print(f"Selected option: {selected_option}")
-        # Handle the selected option
-        # ...existing code...
         print("ahuevo verga")
     return render(request, 'view.html')
