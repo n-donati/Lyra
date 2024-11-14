@@ -9,6 +9,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 from .models import * 
 from django.contrib import messages
+from .utilities.extractCSV import extract_adjacency_matrix
 
 
 def demo_students():
@@ -87,6 +88,34 @@ def read_csv(file, student):
                 )
                 connection.save()
 
+def upload_to_database(adjacency_matrix, matrix_id):
+    matrix = Matrix.objects.get(id=matrix_id)  # Retrieve the matrix instance by ID
+
+    # Create neurons for each row in the adjacency matrix
+    neurons = []
+    for i in range(len(adjacency_matrix)):
+        neuron = Neuron(
+            color="Color",  # Example placeholder
+            size=1.0,       # Example placeholder
+            opacity=1.0,    # Example placeholder
+            neuron_no=i,
+            matrix_id=matrix
+        )
+        neuron.save()
+        neurons.append(neuron)
+
+    # Create connections based on the adjacency matrix
+    for i, row in enumerate(adjacency_matrix):
+        for j, value in enumerate(row):
+            if i != j and value > 0:  # Create connection only if there is a relation and not to self
+                connection = Connection(
+                    neuron_id=neurons[i],
+                    con_neuron_id=neurons[j]
+                )
+                connection.save()
+
+
+
 def home(request):
     return render(request, 'home.html')
 
@@ -104,17 +133,20 @@ def view(request):
         uploaded_file = request.FILES.get('file')  # Get the uploaded file
         if matrix_id and uploaded_file:
             try:
-                matrix = Matrix.objects.get(id=matrix_id)
-                read_csv(uploaded_file, matrix)  # Your function to handle the CSV
+                
+                # first create matrix
+                adjacency_matrix = extract_adjacency_matrix(uploaded_file)
+                upload_to_database(adjacency_matrix, matrix_id)
+                
 
                 messages.success(request, 'File uploaded successfully!')
-                return render(request, 'view.html', {}) # Redirect to a new URL or refresh
+                return render(request, 'view.html', {"matrices": matrices, "users": users}) # Redirect to a new URL or refresh
             except Matrix.DoesNotExist:
                 messages.error(request, 'Matrix not found.')
             except Exception as e:
                 messages.error(request, f'Error uploading file: {str(e)}')
     
-    return render(request, 'view.html', {"matrices": matrices}, {"users": users})
+    return render(request, 'view.html', {"matrices": matrices, "users": users})
 
 def graph(request):
     try:

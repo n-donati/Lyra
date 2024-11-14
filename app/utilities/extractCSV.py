@@ -13,18 +13,20 @@ def extract_adjacency_matrix(file_path):
     
     return adjacency_matrix
 
-def process_first_column(file_path):
+def process_row(file_path):
     # Load the Excel file
     df = pd.read_excel(file_path)
     
-    # Extract text from the first column and delete the first word
-    first_column = df.iloc[:, 0].apply(lambda x: ' '.join(str(x).split(' ')[1:]))
+    # Extract only row 2 from column E onwards
+    extracted_row = df.iloc[1, 4:]  # Row index 1, Column index 4 onwards
     
-    return first_column
+    # Delete the first word from each cell in the extracted row
+    processed_data = extracted_row.apply(lambda x: ' '.join(str(x).split(' ')[1:]) if pd.notnull(x) else '')
+    print("Should have finished", processed_data)
+    return processed_data.tolist()
 
 def extract_adjacency_matrix(file_path):
-
-    first_column_processed = process_first_column(file_path)
+    first_column_processed = process_row(file_path)
     print(first_column_processed.dtypes)
     print(first_column_processed)
 
@@ -60,5 +62,5 @@ def extract_adjacency_matrix(file_path):
     return adjacency_matrix
 
 
-file_path = 'arquitectura1.xlsx'
-extract_adjacency_matrix(file_path)
+# file_path = 'arquitectura1.xlsx'
+# extract_adjacency_matrix(file_path)
