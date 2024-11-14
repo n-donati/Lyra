@@ -129,7 +129,8 @@ def read_csv(matrix, student):
 #                 )
 #                 connection.save()
 
-def upload_to_database(adjacency_matrix, matrix_id):
+def upload_to_database(adjacency_matrix, matrix_id, opacities):
+    
     print(adjacency_matrix.shape)
     matrix = Matrix.objects.get(id=matrix_id)
     neuron_mapping = {}
@@ -138,11 +139,11 @@ def upload_to_database(adjacency_matrix, matrix_id):
     # Create all neurons first
     for name in adjacency_matrix.columns:
         neuron = Neuron(
-            name=name,
-            color="Color",
-            size=1.0,
-            opacity=1.0,
-            neuron_no=count,
+            name=name,  # Use the name from the adjacency matrix
+            color="Color",  # Example placeholder
+            size=1.0,       # Example placeholder
+            opacity=opacities.iloc[count + 4],    # Example placeholder
+            neuron_no= count,  # Optional, for indexing
             matrix_id=matrix
         )
         neuron.save()
@@ -197,8 +198,8 @@ def view(request):
                 
             if matrix_id and uploaded_file:
                 # matrix = Matrix.objects.get(id=matrix_id)
-                adjacency_matrix = extract_adjacency_matrix(uploaded_file)
-                upload_to_database(adjacency_matrix, matrix_id)
+                adjacency_matrix, opacities = extract_adjacency_matrix(uploaded_file)
+                upload_to_database(adjacency_matrix, matrix_id, opacities)
                 current_matrix = get_matrix(matrix_id)
                 draw_graph(request)
                 matrix = Matrix.objects.get(id=matrix_id)
@@ -264,7 +265,17 @@ def graph(request):
                              for node in G.nodes())
         
         i = 1
+        opacities = Neuron.objects.values_list('opacity', flat=True)
+        range = max(opacities) - min(opacities)
         for node in G.nodes():
+            opacity = Neuron.objects.get(id=i).opacity
+            opacity = opacity * range / 100
+            print(type(Neuron.objects.get(id=i).opacity))
+            print(Neuron.objects.get(id=i).opacity)
+            print("opacity", opacity, "\n\n")
+            if opacity < .25:
+                opacity = .25
+                
             group_id = int(clusters[node])
             importance = (degrees[node] * 0.5 + betweenness[node] * 0.5) / max_importance
             nodes.append({
@@ -276,7 +287,8 @@ def graph(request):
                 'label': Neuron.objects.get(id=i).name,
                 'font_size': "2px",
                 'x': pos[node][0] * 1000,  # Usar posiciones del layout
-                'y': pos[node][1] * 1000
+                'y': pos[node][1] * 1000,
+                'opacity': opacity
             })
             i += 1
         
