@@ -320,7 +320,7 @@
             noise += pow(noise, 10.);
             noise = max(.0, noise - .5);
             noise *= (1. - length(vUv - .5));
-            color = vec3(0.5, 0.3, 0.7);
+            color = vec3(0.42, 0.27, 0.99);
             color = color * noise;
             gl_FragColor = vec4(color, noise);
         }
