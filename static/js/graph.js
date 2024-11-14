@@ -1,15 +1,17 @@
 const width = window.innerWidth;
 const height = window.innerHeight - 60;
 
-const canvas = d3.select('#graph-container')
+const container = d3.select('#graph-container');
+
+// Simplified container structure - remove wrapper
+const canvas = container
     .append('canvas')
     .attr('width', width)
-    .attr('height', height)
-    .style('background', '#000');
+    .attr('height', height);
 
 const context = canvas.node().getContext('2d');
 
-const svg = d3.select('#graph-container')
+const svg = container
     .append('svg')
     .attr('width', width)
     .attr('height', height)
@@ -58,43 +60,98 @@ svg.call(zoom);
 
 let currentTransform = d3.zoomIdentity;
 let nodes = [], links = [];
+let animationFrameId = null; // Track animation frame for optimization
 
+// Simplified hover state tracking
+let hoveredArea = null;
+const areaRadius = 100;
+
+container.on('mousemove', (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left - currentTransform.x;
+    const mouseY = event.clientY - rect.top - currentTransform.y;
+    
+    const scaledX = mouseX / currentTransform.k;
+    const scaledY = mouseY / currentTransform.k;
+    
+    hoveredArea = { x: scaledX, y: scaledY };
+    
+    // Only request new frame if not already pending
+    if (!animationFrameId) {
+        animationFrameId = requestAnimationFrame(render);
+    }
+});
+
+container.on('mouseleave', () => {
+    hoveredArea = null;
+    if (!animationFrameId) {
+        animationFrameId = requestAnimationFrame(render);
+    }
+});
+
+// Optimized render function
 function render() {
+    animationFrameId = null; // Reset frame ID
+    
     context.save();
     context.clearRect(0, 0, width, height);
     context.translate(currentTransform.x, currentTransform.y);
     context.scale(currentTransform.k, currentTransform.k);
 
-    // Draw links with enhanced glass effects
+    // Draw base connections first (very subtle)
     links.forEach(link => {
         const sourceNode = nodes[link.source-1];
         const targetNode = nodes[link.target-1];
         
-        const gradient = context.createLinearGradient(
-            sourceNode.x, sourceNode.y,
-            targetNode.x, targetNode.y
-        );
-        
-        const sourceColor = d3.color(sourceNode.color);
-        const targetColor = d3.color(targetNode.color);
-        sourceColor.opacity = 1; // Increased opacity
-        targetColor.opacity = 1; // Increased opacity
-        
-        gradient.addColorStop(0, sourceColor.toString());
-        gradient.addColorStop(0.1, 'rgba(64, 64, 64, 0.5)'); // Increased middle opacity
-        gradient.addColorStop(0.9, 'rgba(64, 64, 64, 0.5)'); // Increased middle opacity
-        gradient.addColorStop(1, targetColor.toString());
-
         context.beginPath();
-        context.strokeStyle = gradient;
-        context.lineWidth = (link.value * 3.5) / currentTransform.k; // Increased base thickness
+        context.strokeStyle = 'rgba(45, 45, 45, 1)';
+        context.lineWidth = Math.max((link.value * 1.5) / currentTransform.k, 0.5);
         context.moveTo(sourceNode.x, sourceNode.y);
         context.lineTo(targetNode.x, targetNode.y);
         context.stroke();
     });
 
+    // Draw highlighted connections if area is hovered
+    if (hoveredArea) {
+        links.forEach(link => {
+            const sourceNode = nodes[link.source-1];
+            const targetNode = nodes[link.target-1];
+            
+            // Calculate distance from hovered area to link
+            const distToSource = Math.hypot(hoveredArea.x - sourceNode.x, hoveredArea.y - sourceNode.y);
+            const distToTarget = Math.hypot(hoveredArea.x - targetNode.x, hoveredArea.y - targetNode.y);
+            
+            if (distToSource < areaRadius || distToTarget < areaRadius) {
+                // Create gradient for highlighted connections
+                const gradient = context.createLinearGradient(
+                    sourceNode.x, sourceNode.y,
+                    targetNode.x, targetNode.y
+                );
+                
+                const sourceColor = d3.color(sourceNode.color);
+                const targetColor = d3.color(targetNode.color);
+                sourceColor.opacity = 0.3;
+                targetColor.opacity = 0.3;
+                
+                gradient.addColorStop(0, sourceColor.toString());
+                gradient.addColorStop(0.5, 'rgba(60, 60, 60, 0.2)');
+                gradient.addColorStop(1, targetColor.toString());
+                
+                context.beginPath();
+                context.strokeStyle = gradient;
+                context.lineWidth = Math.max((link.value * 2) / currentTransform.k, 1);
+                context.moveTo(sourceNode.x, sourceNode.y);
+                context.lineTo(targetNode.x, targetNode.y);
+                context.stroke();
+            }
+        });
+    }
+
     context.restore();
 }
+
+// Update initial zoom to show the entire universe with more space
+svg.call(zoom.transform, d3.zoomIdentity.translate(0, 0).scale(0.8));
 
 function calculateGroupPositions(width, height, groups) {
     const positions = [];
@@ -269,6 +326,3 @@ document.getElementById('resetZoom').addEventListener('click', () => {
        .duration(750)
        .call(zoom.transform, d3.zoomIdentity.translate(0, 0).scale(0.8));
 });
-
-// Update initial zoom to show the entire universe with more space
-svg.call(zoom.transform, d3.zoomIdentity.translate(0, 0).scale(0.8));
