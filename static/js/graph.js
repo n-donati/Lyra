@@ -157,65 +157,30 @@ function calculateGroupPositions(width, height, groups) {
     const positions = [];
     const centerX = width / 2;
     const centerY = height / 2;
-    const universeSize = Math.min(width, height) * 1.5;
+    const universeSize = Math.min(width, height) * 1;
     
-    // Define distinct regions for different types of clusters
-    const regions = [
-        // Frontal regions (top)
-        { x: centerX - universeSize * 0.3, y: centerY - universeSize * 0.4, size: 0.7 },
-        { x: centerX, y: centerY - universeSize * 0.35, size: 0.6 },
-        { x: centerX + universeSize * 0.3, y: centerY - universeSize * 0.4, size: 0.7 },
-
-        // Temporal regions (right)
-        { x: centerX + universeSize * 0.4, y: centerY - universeSize * 0.15, size: 0.6 },
-        { x: centerX + universeSize * 0.45, y: centerY, size: 0.7 },
-        { x: centerX + universeSize * 0.4, y: centerY + universeSize * 0.15, size: 0.6 },
-
-        // Parietal regions (left)
-        { x: centerX - universeSize * 0.4, y: centerY - universeSize * 0.15, size: 0.6 },
-        { x: centerX - universeSize * 0.45, y: centerY, size: 0.7 },
-        { x: centerX - universeSize * 0.4, y: centerY + universeSize * 0.15, size: 0.6 },
-
-        // Occipital regions (bottom)
-        { x: centerX - universeSize * 0.3, y: centerY + universeSize * 0.4, size: 0.7 },
-        { x: centerX, y: centerY + universeSize * 0.35, size: 0.6 },
-        { x: centerX + universeSize * 0.3, y: centerY + universeSize * 0.4, size: 0.7 },
-
-        // Motor and sensory regions (center-right)
-        { x: centerX + universeSize * 0.2, y: centerY - universeSize * 0.1, size: 0.5 },
-        { x: centerX + universeSize * 0.2, y: centerY + universeSize * 0.1, size: 0.5 },
-        { x: centerX + universeSize * 0.15, y: centerY, size: 0.5 },
-
-        // Deep brain regions (center-left)
-        { x: centerX - universeSize * 0.2, y: centerY - universeSize * 0.1, size: 0.5 },
-        { x: centerX - universeSize * 0.2, y: centerY + universeSize * 0.1, size: 0.5 },
-        { x: centerX - universeSize * 0.15, y: centerY, size: 0.5 }
-    ];
-
+    // Define spiral parameters
+    const spiralArms = 3;
+    const rotationFactor = 2 * Math.PI;
+    const spiralTightness = 0.3;
+    
     // Generate positions for each group
     for (let i = 0; i < groups; i++) {
-        const region = regions[i];
-        const galaxyType = i % 3; // Alternate between different galaxy types
-        let x = region.x, y = region.y;
-
-        // Add specific formation patterns based on region type
-        switch (galaxyType) {
-            case 0: // Spiral formation
-                x += (Math.random() - 0.5) * region.size * 100;
-                y += (Math.random() - 0.5) * region.size * 100;
-                break;
-            case 1: // Elliptical formation
-                const angle = Math.random() * Math.PI * 2;
-                x += Math.cos(angle) * region.size * 50;
-                y += Math.sin(angle) * region.size * 50;
-                break;
-            case 2: // Cluster formation
-                x += (Math.random() - 0.5) * region.size * 150;
-                y += (Math.random() - 0.5) * region.size * 150;
-                break;
-        }
-
-        positions.push({ x, y });
+        const angle = (i / groups) * 2 * Math.PI;
+        const galaxyRadius = universeSize * 0.3;
+        
+        // Add spiral effect with random perturbations
+        const spiralAngle = angle + (i / groups) * rotationFactor;
+        const radiusOffset = Math.random() * 0.3 + 0.7; // 70-100% of radius
+        const x = centerX + Math.cos(spiralAngle) * galaxyRadius * radiusOffset;
+        const y = centerY + Math.sin(spiralAngle) * galaxyRadius * radiusOffset;
+        
+        positions.push({ 
+            x, 
+            y,
+            rotation: spiralAngle,
+            radiusFactor: radiusOffset
+        });
     }
     
     return positions;
@@ -229,26 +194,40 @@ fetch('/graph/')
             return;
         }
 
-        // Store data globally
         nodes = data.nodes;
         links = data.links;
 
-        // Calculate positions
+        // Calculate initial positions
         const groupPositions = calculateGroupPositions(width, height, data.groups);
         
-        // Position nodes with more realistic star cluster distribution
+        // Position nodes initially
         nodes.forEach(node => {
             const groupCenter = groupPositions[node.group];
-            const angle = Math.random() * Math.PI * 2;
+            const spiralOffset = Math.random() * 2 * Math.PI;
+            const distanceFromCenter = Math.pow(Math.random(), 0.5) * 150; // More nodes toward edges
             
-            // Create dense star clusters with varying sizes
-            const clusterDensity = Math.random();
-            const clusterSize = 50 + (node.group * 15) + (clusterDensity * 100);
-            const distributionRadius = Math.pow(Math.random(), 2) * clusterSize; // Quadratic distribution for denser cores
+            // Add spiral arm effect
+            const spiralAngle = groupCenter.rotation + (distanceFromCenter * 0.01);
+            const wobble = (Math.random() - 0.5) * 30; // Random perturbation
             
-            node.x = groupCenter.x + Math.cos(angle) * distributionRadius;
-            node.y = groupCenter.y + Math.sin(angle) * distributionRadius;
+            node.x = groupCenter.x + 
+                Math.cos(spiralAngle) * (distanceFromCenter + wobble) * groupCenter.radiusFactor;
+            node.y = groupCenter.y + 
+                Math.sin(spiralAngle) * (distanceFromCenter + wobble) * groupCenter.radiusFactor;
         });
+
+        // Create force simulation with reduced spacing
+        const simulation = d3.forceSimulation(nodes)
+            .force('charge', d3.forceManyBody().strength(-50)) // Reduced repulsion
+            .force('collide', d3.forceCollide().radius(d => {
+                return d.size + (d.beingDragged ? 5 : 2); // Much tighter collision
+            }))
+            .force('x', d3.forceX(width / 2).strength(0.02))
+            .force('y', d3.forceY(height / 2).strength(0.02))
+            .stop();
+
+        // Run simulation for fewer iterations
+        for (let i = 0; i < 200; i++) simulation.tick();
 
         // Update node styling
         const nodeElements = g.append('g')
@@ -322,21 +301,64 @@ fetch('/graph/')
         feMerge.append('feMergeNode')
             .attr('in', 'SourceGraphic');
 
-        // Handle node dragging with position updates
+        // Modified drag handler with tighter collision detection
         const dragHandler = d3.drag()
             .on('start', (event, d) => {
+                d.beingDragged = true;
                 d3.select(event.sourceEvent.target).classed('dragging', true);
             })
             .on('drag', (event, d) => {
-                d.x = event.x;
-                d.y = event.y;
-                d3.select(event.sourceEvent.target)
-                    .attr('cx', d.x)
-                    .attr('cy', d.y);
-                requestAnimationFrame(render);
+                const proposedX = event.x;
+                const proposedY = event.y;
+                let canMove = true;
+
+                // Check collisions with group-aware spacing
+                nodes.forEach(other => {
+                    if (other !== d) {
+                        const dx = other.x - proposedX;
+                        const dy = other.y - proposedY;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        // Reduce minimum distance for same group
+                        const padding = d.group === other.group ? 2 : 8;
+                        const minDistance = d.size + other.size + padding;
+
+                        if (distance < minDistance) {
+                            canMove = false;
+                        }
+                    }
+                });
+
+                // Keep nodes within bounds with tighter margins
+                const margin = d.size + 5;
+                if (proposedX < margin || proposedX > width - margin ||
+                    proposedY < margin || proposedY > height - margin) {
+                    canMove = false;
+                }
+
+                if (canMove) {
+                    d.x = proposedX;
+                    d.y = proposedY;
+                    d3.select(event.sourceEvent.target)
+                        .attr('cx', d.x)
+                        .attr('cy', d.y);
+                    
+                    // Update label position
+                    const label = d3.selectAll('.node-label')
+                        .filter(label => label === d);
+                    
+                    label.selectAll('tspan')
+                        .attr('x', d.x)
+                        .attr('y', function(_, i) {
+                            const lines = label.selectAll('tspan').size();
+                            const lineHeight = d.size * 0.2 * 0.9;
+                            return d.y + i * lineHeight - ((lines - 1) * lineHeight) / 2;
+                        });
+
+                    requestAnimationFrame(render);
+                }
             })
-            
             .on('end', (event, d) => {
+                d.beingDragged = false;
                 d3.select(event.sourceEvent.target).classed('dragging', false);
             });
 

@@ -17,47 +17,26 @@ import json
 current_matrix = [[]]
 
 def get_matrix(student_id):
-    adj_graph = []
-    return_matrix = []
+    # Get all nodes in one query and create a lookup dictionary
+    nodes = list(Neuron.objects.filter(matrix_id=student_id))
+    node_lookup = {node.id: node.neuron_no for node in nodes}
+    n = len(nodes)
     
-    print("beginning")
-    # matrix = Matrix.objects.get(user_id=student_id)
-    nodes = Neuron.objects.filter(matrix_id=student_id)
+    # Initialize empty matrix
+    return_matrix = [[0] * n for _ in range(n)]
     
-    for i in range(len(nodes)):
-        adj_graph.append([])
-        connections = Connection.objects.filter(neuron_id=nodes[i])
-        for j in range(len(connections)):
-            adj_graph[i].append(connections[j].con_neuron_id.id)
+    # Get all connections in a single query
+    connections = Connection.objects.filter(
+        neuron_id__matrix_id=student_id
+    ).select_related('neuron_id', 'con_neuron_id')
     
-    # print(len(nodes))
-    # print(len(adj_graph))
-    
-    for i in range(len(nodes)):
-        k = 0
-        return_matrix.append([])
-        for j in range(len(nodes)):
-            if i == j:
-                return_matrix[i].append(0)
-            elif k >= len(adj_graph[i]) - 1:
-                return_matrix[i].append(0)
-            elif Neuron.objects.get(id=adj_graph[i][k]).neuron_no == j:
-                return_matrix[i].append(1)
-                k+=1
-            else:
-                return_matrix[i].append(0)
-    # print("RETURN MATRIX", return_matrix)
-                
+    # Fill matrix using the connections
+    for conn in connections:
+        from_idx = node_lookup[conn.neuron_id.id]
+        to_idx = node_lookup[conn.con_neuron_id.id]
+        return_matrix[from_idx][to_idx] = 1
+        
     return return_matrix
-
-# @csrf_exempt
-# def generate_response(request):
-#     if request.method == 'POST':
-#         message = request.POST.get('message')
-#         chatgpt = ChatGPT()  # No need to pass the API key here
-#         response = chatgpt.get_response(message)  # Changed from generate_response to get_response
-#         return JsonResponse({'response': response})
-
 
 def demo_students():
     if not User.objects.exists():
@@ -152,35 +131,39 @@ def read_csv(matrix, student):
 
 def upload_to_database(adjacency_matrix, matrix_id):
     print(adjacency_matrix.shape)
-    matrix = Matrix.objects.get(id=matrix_id)  # Retrieve the matrix instance by ID
+    matrix = Matrix.objects.get(id=matrix_id)
     neuron_mapping = {}
-    # Create neurons for each row in the adjacency matrix
-    # neurons = []
     count = 0
+    
+    # Create all neurons first
     for name in adjacency_matrix.columns:
         neuron = Neuron(
-            name=name,  # Use the name from the adjacency matrix
-            color="Color",  # Example placeholder
-            size=1.0,       # Example placeholder
-            opacity=1.0,    # Example placeholder
-            neuron_no= count,  # Optional, for indexing
+            name=name,
+            color="Color",
+            size=1.0,
+            opacity=1.0,
+            neuron_no=count,
             matrix_id=matrix
         )
-        count += 1
         neuron.save()
-        # neurons.append(neuron)
-        neuron_mapping[name] = neuron  
+        neuron_mapping[name] = neuron
+        count += 1
 
-    # Create connections based on the adjacency matrix
-    for i, row_name in enumerate(adjacency_matrix.index):
-        for j, col_name in enumerate(adjacency_matrix.columns):
-            value = adjacency_matrix.iat[i, j]
-            if row_name != col_name and int(value) > 0:  # Only create if there is a relation and not self
-                connection = Connection(
-                    neuron_id=neuron_mapping[row_name],     # Get neuron by name
-                    con_neuron_id=neuron_mapping[col_name]  # Get connected neuron by name
-                )
-                connection.save()
+    # Create connections only where value > 0
+    connections_to_create = []
+    for row_name, row in adjacency_matrix.iterrows():
+        # Use boolean indexing to find non-zero connections
+        connections = row[row > 0]
+        for col_name in connections.index:
+            if row_name != col_name:  # Skip self-connections
+                connections_to_create.append(Connection(
+                    neuron_id=neuron_mapping[row_name],
+                    con_neuron_id=neuron_mapping[col_name]
+                ))
+    
+    # Bulk create all connections at once
+    if connections_to_create:
+        Connection.objects.bulk_create(connections_to_create)
 
 def home(request):
     return render(request, 'home.html')
@@ -288,7 +271,7 @@ def graph(request):
                 'id': node + 1,
                 'group': group_id,
                 'color': colors[group_id % len(colors)],
-                'size': 3 + (importance ** 2 * 20),
+                'size': 10 + (importance ** 2.5 * 20),
                 'degree': degrees[node],
                 'label': Neuron.objects.get(id=i).name,
                 'font_size': "2px",

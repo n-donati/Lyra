@@ -132,8 +132,11 @@
             </div>
         </div>
 
-        <div>
-          {{ matrix }}
+        <div class="architecture-indicator">
+            <div class="architecture-title">Current Architecture</div>
+            <div class="architecture-content">
+                {{ matrix }}
+            </div>
         </div>
     </div>
     <script>
@@ -216,8 +219,8 @@ function showResponse(text) {
     content.classList.add('typing');
     
     let i = 0;
-    const typingSpeed = 15; // Reduced from 25 to 15ms for faster typing
-    const chunkSize = 2;   // Added: type 2 characters at once
+    const typingSpeed = 15;
+    const chunkSize = 2;
     
     function typeWriter() {
         if (i < text.length) {
