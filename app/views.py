@@ -41,7 +41,7 @@ def load_network():
     except:
         return None, [], {}, {}
 
-def read_csv(file):
+def read_csv(file, student):
     neuron_ids = []
     
     try:
@@ -52,7 +52,7 @@ def read_csv(file):
     csv_data = StringIO(csv_file_content)
     reader = csv.reader(csv_data)
     
-    matrix = Matrix(user_id=User.objects.create())
+    matrix = Matrix(user_id=User.objects.get(id=student.id))
     matrix.save()
     
     for i, row in enumerate(reader):
@@ -80,21 +80,29 @@ def read_csv(file):
                 connection.save()
 
 def home(request):
-    if request.method == 'POST' and request.FILES['file']:
-        csv_file = request.FILES['file']
-        
-        if(csv_file):
-            read_csv(csv_file)
-        
     return render(request, 'home.html')
 
 def view(request):
+    global last_id
     demo_students()
     students = User.objects.filter(role="STUDENT")
     
     if request.method == 'POST':
-        student_id = request.POST.get('student_id')
-        return render(request, 'view.html', {"students": students, "student_id": student_id})
+        student_id = None
+        uploaded_file = None
+        
+        for key, value in request.FILES.items():
+            if '.file' in key:
+                student_id = key.split('.')[0]  
+                uploaded_file = value
+                      
+        if student_id and uploaded_file:
+            student = User.objects.get(id=student_id)
+            read_csv(uploaded_file, student)
+        
+        if request.POST.get('student_id'):
+            student_id = request.POST.get('student_id')
+            return render(request, 'view.html', {"students": students, "student_id": student_id})
     
     return render(request, 'view.html', {"students": students})
 

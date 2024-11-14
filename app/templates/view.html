@@ -1,65 +1,81 @@
 {% load static %}
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Network Visualizer</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/view.css' %}">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{% static 'css/view.css' %}" />
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/feather-icons"></script>
-</head>
-<body>
+  </head>
+  <body>
     <header>
-        <div class="header-left">
-            <a href="/" class="logo">
-                Network Visualizer
-            </a>
-            <nav class="nav-links">
-                <a href="#" onclick="toggleMenu()">Students</a>
-                <a href="#">Analysis</a>
-                <a href="#">Reports</a>
-                <a href="#">Settings</a>
-            </nav>
+      <div class="header-left">
+        <a href="/" class="logo"> Network Visualizer </a>
+        <nav class="nav-links">
+          <a href="#" onclick="toggleMenu()">Students</a>
+          <a href="#">Analysis</a>
+          <a href="#">Reports</a>
+          <a href="#">Settings</a>
+        </nav>
 
-            <div id="sidebar-menu" class="sidebar" enctype="multipart/form-data">
-                {% for student in students %}
-                <form method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="student_id" value="{{ student.id }}">
-                    <button type="submit">{{ student.name }}</button>
-                </form>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="header-right">
-            <div class="search-container">
-                <i data-feather="search" class="search-icon"></i>
-                <input type="text" class="search-input" placeholder="Search nodes...">
-            </div>
-            <button id="resetZoom">
-                <i data-feather="maximize-2"></i>
-                <span>Reset View</span>
+        <div id="sidebar-menu" class="sidebar">
+          {% for student in students %}
+          <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="student_id" value="{{ student.id }}" />
+            <button type="submit">{{ student.name }}</button>
+          </form>
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="file" id="file" name="{{student.id}}.file" />
+            <button
+              type="submit"
+              class="btn btn-success btn-md mt-3 w-100 rounded-pill shadow"
+            >
+              Submit
             </button>
-            <button>
-                <i data-feather="share-2"></i>
-                <span>Share</span>
-            </button>
+          </form>
+          <br />
+          {% endfor %}
         </div>
+      </div>
+      <div class="header-right">
+        <div class="search-container">
+          <i data-feather="search" class="search-icon"></i>
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search nodes..."
+          />
+        </div>
+        <button id="resetZoom">
+          <i data-feather="maximize-2"></i>
+          <span>Reset View</span>
+        </button>
+        <button>
+          <i data-feather="share-2"></i>
+          <span>Share</span>
+        </button>
+      </div>
     </header>
     <div id="graph-container"></div>
     <script>
-        feather.replace();
+      feather.replace();
     </script>
     <script src="{% static 'js/graph.js' %}"></script>
     <script>
-        function toggleMenu() {
-            const menu = document.getElementById('sidebar-menu');
-            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-        }
+      function toggleMenu() {
+        const menu = document.getElementById("sidebar-menu");
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+      }
     </script>
-</body>
+  </body>
 </html>
