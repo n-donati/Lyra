@@ -282,7 +282,7 @@ def graph(request):
                 'id': node + 1,
                 'group': group_id,
                 'color': colors[group_id % len(colors)],
-                'size': 3 + (importance ** 2 * 10),
+                'size': 3 + (importance ** 2 * 20),
                 'degree': degrees[node],
                 'label': Neuron.objects.get(id=i).name,
                 'font_size': "2px",
