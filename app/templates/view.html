@@ -52,7 +52,7 @@
         </div>
       </div>
       <div class="header-right">
-        <form method="post" action="{% url 'view' %}">
+        <form method="post" action="{% url 'view' %}" onsubmit="event.preventDefault(); if(event.target.querySelector('.search-input').value.trim()) this.submit();">
           <div class="search-container">
             <i data-feather="search" class="search-icon"></i>
             <input
@@ -62,7 +62,6 @@
               name="message"
             />
           </div>
-          <button type="submit">Submit</button>
         </form>
         <button id="resetZoom">
           <i data-feather="maximize-2"></i>
