@@ -19,7 +19,7 @@ class ChatGPT:
             "model": "gpt-4o-mini",
             "messages": [
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": f"Provéeme observaciones de la relación del concepto de {prompt} con respecto a las siguientes competencias: \"Solución de problemas en Física, Formulación de soluciones, Identificar los fenómenos físicos, Generar estrategias de solución, Experimentación en física.\" De manera ágil y precisa."}
             ]
         }
         response = requests.post(self.endpoint, headers=headers, json=data)
