@@ -14,11 +14,14 @@ def process_row(file_path):
     processed_data = data_in_ce.apply(lambda x: ' '.join(str(x).split()[1:]) if pd.notna(x) and isinstance(x, str) else x)
     
     # print("Processed Data from column CE:\n", processed_data)
-    return processed_data
+    
+    row_data = df.iloc[3]
+    
+    return processed_data, row_data
 
 
 def extract_adjacency_matrix(file_path):
-    first_row_processed = process_row(file_path)
+    first_row_processed, opacities = process_row(file_path)
 
     # Convert the processed data to a list, then to an array
     processed_list = first_row_processed.tolist()
@@ -47,7 +50,7 @@ def extract_adjacency_matrix(file_path):
                 adjacency_matrix.iloc[i, j] = 1
 
     # print("Adjacency Matrix:\n", adjacency_matrix)
-    return adjacency_matrix
+    return adjacency_matrix, opacities
 
 # Assuming the correct file path
 # file_path = 'calificaciones1.xlsx'
