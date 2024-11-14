@@ -1,53 +1,62 @@
-# First, let's generate the CSV using Python
 import random
 import pandas as pd
 import numpy as np
 
-# Generate neurons with regional connectivity
-def generate_neural_network():
-    neurons = 250
-    nodes_per_region = neurons // 18
-    remainder = neurons % 18
+def generate_matrix(size, regions, local_density, distant_density):
+    """
+    Generate an adjacency matrix with specified parameters
     
-    # Create 18 brain regions with roughly equal distribution
-    regions = {}
-    current_start = 1
+    Args:
+        size: Total number of neurons
+        regions: Number of brain regions
+        local_density: Probability of connection within same region (0-1)
+        distant_density: Probability of connection with other regions (0-1)
+    """
+    # Create empty adjacency matrix
+    matrix = np.zeros((size, size))
     
-    region_names = [
-        'frontal_sup', 'frontal_inf', 'prefrontal',
-        'temporal_sup', 'temporal_inf', 'temporal_med',
-        'parietal_sup', 'parietal_inf', 'parietal_med',
-        'occipital_sup', 'occipital_inf', 'occipital_lat',
-        'motor_primary', 'motor_supplementary', 'sensory_primary',
-        'limbic', 'subcortical', 'cerebellar'
-    ]
+    # Calculate neurons per region
+    nodes_per_region = size // regions
+    remainder = size % regions
     
-    for i, name in enumerate(region_names):
-        size = nodes_per_region + (1 if i < remainder else 0)
-        regions[name] = list(range(current_start, current_start + size))
-        current_start += size
+    # Create region assignments
+    region_assignments = []
+    current_pos = 0
+    for i in range(regions):
+        region_size = nodes_per_region + (1 if i < remainder else 0)
+        region_assignments.extend([i] * region_size)
     
-    connections = []
-    for neuron in range(1, neurons + 1):
-        # Determine region of current neuron
-        current_region = [r for r, n in regions.items() if neuron in n][0]
-        
-        # Higher probability to connect within same region
-        same_region_neurons = regions[current_region]
-        other_neurons = [n for n in range(1, neurons + 1) if n not in same_region_neurons]
-        
-        # Create connections with bias towards same region
-        local_connections = random.sample(same_region_neurons, random.randint(1, 4))
-        distant_connections = random.sample(other_neurons, random.randint(2, 3))
-        all_connections = local_connections + distant_connections
-        
-        connections.append({
-            'node': neuron,
-            'connections': ','.join(map(str, [c for c in all_connections if c != neuron]))
-        })
+    # Generate connections
+    for i in range(size):
+        current_region = region_assignments[i]
+        for j in range(i + 1, size):  # Upper triangle only
+            target_region = region_assignments[j]
+            
+            # Determine connection probability
+            if current_region == target_region:
+                prob = local_density
+            else:
+                prob = distant_density
+                
+            # Create symmetric connection
+            if random.random() < prob:
+                matrix[i][j] = 1
+                matrix[j][i] = 1  # Make it symmetric
     
-    return pd.DataFrame(connections)
+    return matrix.tolist()  # Convert to Python list for JSON serialization
 
-# Generate and save the network
-network = generate_neural_network()
-network.to_csv('data/network.csv', index=False)
+# Example usage:
+if __name__ == "__main__":
+    # Generate a larger test matrix
+    test_matrix = generate_matrix(
+        size=400,          # Default size
+        regions=18,        # Default regions
+        local_density=0.7, # Default local density
+        distant_density=0.2 # Default distant density
+    )
+    
+    # Print matrix size and sample
+    print(f"Matrix size: {len(test_matrix)}x{len(test_matrix)}")
+    print("Sample of first 5x5 elements:")
+    for row in test_matrix[:5]:
+        print([int(x) for x in row[:5]])

@@ -1,11 +1,12 @@
 from io import StringIO
+import json
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 import networkx as nx
-import pandas as pd
-from functools import lru_cache
 import numpy as np
 from sklearn.cluster import KMeans
+from functools import lru_cache
+from network_gen import generate_matrix
 from .models import * 
 from .utilities.extractCSV import extract_adjacency_matrix
 
@@ -40,7 +41,6 @@ def get_matrix(student_id):
                 return_matrix[i].append(0)
                 
     return return_matrix
-        
 
 def demo_students():
     if not User.objects.exists():
@@ -99,16 +99,33 @@ def read_csv(matrix, student):
         neuron.save()
         neuron_ids.append(neuron.id)
         
-    for i in range(len(matrix)):
-        for j in range(len(matrix[i])):
-            if j < len(matrix[i]) - 1:
-                value = float(matrix[i][j])
-                if i != j and value > 0:
-                    connection = Connection(
-                        neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
-                        con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
-                    )
-                    connection.save()
+        for i in range(len(matrix)):
+            for j in range(len(matrix[i])):
+                if j < len(matrix[i]) - 1:
+                    value = float(matrix[i][j])
+                    if i != j and value > 0:
+                        connection = Connection(
+                            neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
+                            con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
+                        )
+                        connection.save()
+                    
+def process_matrix(matrix_data, student):
+    neuron_ids = []
+    
+    matrix = Matrix(user_id=User.objects.get(id=student.id))
+    matrix.save()
+    
+    
+    for i, row in enumerate(matrix_data):
+        for j in range(len(row)):
+            value = float(row[j])
+            if i != j and value > 0:
+                connection = Connection(
+                    neuron_id=Neuron.objects.get(id=neuron_ids[i]), 
+                    con_neuron_id=Neuron.objects.get(id=neuron_ids[j]),
+                )
+                connection.save()
 
 def home(request):
     return render(request, 'home.html')
@@ -130,6 +147,8 @@ def view(request):
             student = User.objects.get(id=student_id)
             matrix = extract_adjacency_matrix(uploaded_file)
             read_csv(matrix, student)
+            matrix_data = json.load(uploaded_file)
+            process_matrix(matrix_data, student)
         
         if request.POST.get('student_id'):
             student_id = request.POST.get('student_id')
@@ -140,15 +159,16 @@ def view(request):
 
 def graph(request):
     try:
+        # Generate a larger matrix with our desired parameters
+        matrix = generate_matrix(
+            size=81,          # 400 neurons
+            regions=18,        # 18 brain regions
+            local_density=0.08, # High within-region connectivity
+            distant_density=0.06 # Lower between-region connectivity
+        )
         
-        df = pd.read_csv('data/network.csv')
-        G = nx.Graph()
-        
-        # Build graph
-        for _, row in df.iterrows():
-            source = int(row['node'])
-            targets = [int(t.strip()) for t in row['connections'].split(',')]
-            G.add_edges_from([(source, target) for target in targets])
+        # Convert matrix to networkx graph
+        G = nx.Graph(np.array(matrix))
         
         # Calculate node metrics
         degrees = dict(G.degree())
@@ -156,51 +176,45 @@ def graph(request):
         
         # Create adjacency matrix for clustering
         adj_matrix = nx.to_numpy_array(G)
-        n_clusters = 18  # Updated number of clusters
+        n_clusters = min(18, len(matrix))  # Adjust clusters based on matrix size
         
-        # Perform spectral clustering
+        # Perform clustering
         kmeans = KMeans(n_clusters=n_clusters, random_state=42)
         clusters = kmeans.fit_predict(adj_matrix)
         
-        # Extended color palette for 18 groups with regional color coding
+        # Color palette remains the same
         colors = [
-            # Frontal regions (reds)
-            '#FF3366', '#FF4D4D', '#FF6B61',
-            # Temporal regions (blues)
-            '#3366FF', '#4D94FF', '#66B2FF',
-            # Parietal regions (greens)
-            '#33FF99', '#66FF66', '#99FF33',
-            # Occipital regions (purples)
-            '#9933FF', '#B266FF', '#CC99FF',
-            # Motor and sensory regions (oranges)
-            '#FF9933', '#FFB266', '#FFCC99',
-            # Deep brain regions (cyans)
-            '#33FFFF', '#66FFFF', '#99FFFF'
+            '#FF00FF', '#FF33FF', '#FF66FF',  # Neon pinks
+            '#00FFFF', '#33FFFF', '#66FFFF',  # Neon cyans
+            '#00FF00', '#33FF33', '#66FF66',  # Neon greens
+            '#FFFF00', '#FFFF33', '#FFFF66',  # Neon yellows
+            '#FF6600', '#FF9933', '#FFCC66',  # Neon oranges
+            '#6600FF', '#9933FF', '#CC66FF'   # Neon purples
         ]
         
-        # Create nodes with group information
+        # Create nodes
         nodes = []
-        max_importance = max((degrees[node] * 0.5 + betweenness[node] * 0.5) for node in G.nodes())
+        max_importance = max((degrees[node] * 0.5 + betweenness[node] * 0.5) 
+                           for node in G.nodes())
         
         for node in G.nodes():
-            group_id = int(clusters[node-1])
-            # Normalize importance to keep node sizes smaller
+            group_id = int(clusters[node])
             importance = (degrees[node] * 0.5 + betweenness[node] * 0.5) / max_importance
             nodes.append({
-                'id': node,
+                'id': node + 1,  # Add 1 to match the JS expectation
                 'group': group_id,
-                'color': colors[group_id],
+                'color': colors[group_id % len(colors)],
                 'size': 3 + (importance * 10),
                 'degree': degrees[node]
             })
         
-        # Sort links by group connectivity
+        # Create links
         links = []
         for u, v in G.edges():
             links.append({
-                'source': u,
-                'target': v,
-                'value': 1 if clusters[u-1] == clusters[v-1] else 0.5
+                'source': u + 1,  # Add 1 to match the JS expectation
+                'target': v + 1,  # Add 1 to match the JS expectation
+                'value': 1 if clusters[u] == clusters[v] else 0.5
             })
         
         return JsonResponse({
