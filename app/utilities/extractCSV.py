@@ -1,66 +1,55 @@
 import pandas as pd
-import openpyxl
-import numpy as np
-# extract from csv and save to the database
-# estaria de huevos que del mismo script pueda transformar o entender el csv antes de extraerlo.
 
-def extract_adjacency_matrix(file_path):
-    # Load the Excel file
-    df = pd.read_excel(file_path)
-    
-    # Extract the adjacency matrix
-    adjacency_matrix = df.values
-    
-    return adjacency_matrix
+import pandas as pd
 
 def process_row(file_path):
     # Load the Excel file
     df = pd.read_excel(file_path)
     
-    # Extract only row 2 from column E onwards
-    extracted_row = df.iloc[1, 4:]  # Row index 1, Column index 4 onwards
+    # Extract only the first row of column 'CE'
+    # Since pandas uses zero-based indexing, ensure 'CE' is the correct label from your preview data.
+    data_in_ce = df.iloc[:, 82]  # Accessing data using column label 'CE' and row index 0 for the first row.
     
-    # Delete the first word from each cell in the extracted row
-    processed_data = extracted_row.apply(lambda x: ' '.join(str(x).split(' ')[1:]) if pd.notnull(x) else '')
-    print("Should have finished", processed_data)
-    return processed_data.tolist()
+    # Delete the first word from the cell in column 'CE'
+    # Convert the cell to string, split it, and join it back excluding the first word
+    processed_data = data_in_ce.apply(lambda x: ' '.join(str(x).split()[1:]) if pd.notna(x) and isinstance(x, str) else x)
+    
+    # print("Processed Data from column CE:\n", processed_data)
+    return processed_data
+
 
 def extract_adjacency_matrix(file_path):
-    first_column_processed = process_row(file_path)
-    print(first_column_processed.dtypes)
-    print(first_column_processed)
+    first_row_processed = process_row(file_path)
 
-    # ...existing code...
-    # parsing for words and dictionary for word counting
-    df = np.array(first_column_processed)
-    print(df)
+    # Convert the processed data to a list, then to an array
+    processed_list = first_row_processed.tolist()
+    # print("Processed List:", processed_list)
 
+    # Parse for words and create a dictionary for word counting
     countDict = {}
-    for competencia in df:
-        competencia = competencia.split()
-        for word in competencia:
+    for item in processed_list:
+        words = item.split()
+        for word in words:
             if word in countDict:
                 countDict[word] += 1
             else:
                 countDict[word] = 1
 
-    print(countDict)
+    # print("Word Count Dictionary:", countDict)
 
     # Construct adjacency matrix dataframe for words shared
-    competences = df.tolist()
+    competences = processed_list
     adjacency_matrix = pd.DataFrame(0, index=competences, columns=competences)
 
     for i, comp1 in enumerate(competences):
         words1 = set(comp1.split())
         for j, comp2 in enumerate(competences):
-            if i != j:
-                words2 = set(comp2.split())
-                if words1.intersection(words2):
-                    adjacency_matrix.iloc[i, j] = 1
+            if i != j and words1.intersection(set(comp2.split())):
+                adjacency_matrix.iloc[i, j] = 1
 
-    print(adjacency_matrix)
+    # print("Adjacency Matrix:\n", adjacency_matrix)
     return adjacency_matrix
 
-
-# file_path = 'arquitectura1.xlsx'
+# Assuming the correct file path
+# file_path = 'calificaciones1.xlsx'
 # extract_adjacency_matrix(file_path)

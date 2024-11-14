@@ -10,6 +10,43 @@ from sklearn.cluster import KMeans
 from .models import * 
 from django.contrib import messages
 from .utilities.extractCSV import extract_adjacency_matrix
+import json
+
+current_matrix = [[]]
+
+def get_matrix(student_id):
+    adj_graph = []
+    return_matrix = []
+    
+    print("beginning")
+    # matrix = Matrix.objects.get(user_id=student_id)
+    nodes = Neuron.objects.filter(matrix_id=student_id)
+    
+    for i in range(len(nodes)):
+        adj_graph.append([])
+        connections = Connection.objects.filter(neuron_id=nodes[i])
+        for j in range(len(connections)):
+            adj_graph[i].append(connections[j].con_neuron_id.id)
+    
+    # print(len(nodes))
+    # print(len(adj_graph))
+    
+    for i in range(len(nodes)):
+        k = 0
+        return_matrix.append([])
+        for j in range(len(nodes)):
+            if i == j:
+                return_matrix[i].append(0)
+            elif k >= len(adj_graph[i]) - 1:
+                return_matrix[i].append(0)
+            elif Neuron.objects.get(id=adj_graph[i][k]).neuron_no == j:
+                return_matrix[i].append(1)
+                k+=1
+            else:
+                return_matrix[i].append(0)
+    print("RETURN MATRIX", return_matrix)
+                
+    return return_matrix
 
 
 def demo_students():
@@ -107,58 +144,68 @@ def upload_to_database(adjacency_matrix, matrix_id):
     # Create connections based on the adjacency matrix
     for i, row in enumerate(adjacency_matrix):
         for j, value in enumerate(row):
-            if i != j and value > 0:  # Create connection only if there is a relation and not to self
+            print(value)
+            if i != j and int(value) > 0:  # Create connection only if there is a relation and not to self
                 connection = Connection(
                     neuron_id=neurons[i],
                     con_neuron_id=neurons[j]
                 )
                 connection.save()
 
-
-
 def home(request):
     return render(request, 'home.html')
 
 def view(request):
-    try:
-        demo_students()
-    except:
-        pass
-    matrices = Matrix.objects.all()
+    global current_matrix
+    demo_students()
     users = User.objects.all()
+    matrices = Matrix.objects.all()
     
     if request.method == 'POST':
-        # Get matrix_id directly from POST data
-        matrix_id = request.POST.get('matrix_id')
-        uploaded_file = request.FILES.get('file')  # Get the uploaded file
-        if matrix_id and uploaded_file:
-            try:
+        student_id = None
+        uploaded_file = None
+        
+        for key, value in request.FILES.items():
+            if '.file' in key:
+                matrix_id = key.split('.')[0]  
+                uploaded_file = value
                 
-                # first create matrix
+                
+            if matrix_id and uploaded_file:
+                # matrix = Matrix.objects.get(id=matrix_id)
                 adjacency_matrix = extract_adjacency_matrix(uploaded_file)
                 upload_to_database(adjacency_matrix, matrix_id)
+                current_matrix = get_matrix(matrix_id)
+                draw_graph(request)
+            
+            if request.POST.get('student_id'):
+                matrix_id = request.POST.get('student_id')
+                current_matrix = get_matrix(matrix_id)
+                draw_graph(request)
+                return render(request, 'view.html', {"matrices": matrices, "users": users})
+                
+                # # first create matrix
+                # adjacency_matrix = extract_adjacency_matrix(uploaded_file)
+                # upload_to_database(adjacency_matrix, matrix_id)
+                # global current_matrix 
+                # print("reached")
+                # current_matrix= get_matrix(matrix_id)
+                # draw_graph(request)
                 
 
-                messages.success(request, 'File uploaded successfully!')
-                return render(request, 'view.html', {"matrices": matrices, "users": users}) # Redirect to a new URL or refresh
-            except Matrix.DoesNotExist:
-                messages.error(request, 'Matrix not found.')
-            except Exception as e:
-                messages.error(request, f'Error uploading file: {str(e)}')
-    
+                # messages.success(request, 'File uploaded successfully!')
+                # return render(request, 'view.html', {"matrices": matrices, "users": users}) # Redirect to a new URL or refresh
     return render(request, 'view.html', {"matrices": matrices, "users": users})
 
 def graph(request):
+    global current_matrix
     try:
+        # Generate a larger matrix with our desired parameters
+        matrix = current_matrix
+        print(matrix)
         
-        df = pd.read_csv('data/network.csv')
-        G = nx.Graph()
-        
-        # Build graph
-        for _, row in df.iterrows():
-            source = int(row['node'])
-            targets = [int(t.strip()) for t in row['connections'].split(',')]
-            G.add_edges_from([(source, target) for target in targets])
+        # Convert matrix to networkx graph
+        G = nx.Graph(np.array(matrix))
         
         # Calculate node metrics
         degrees = dict(G.degree())
@@ -166,51 +213,45 @@ def graph(request):
         
         # Create adjacency matrix for clustering
         adj_matrix = nx.to_numpy_array(G)
-        n_clusters = 18  # Updated number of clusters
+        n_clusters = min(18, len(matrix))  # Adjust clusters based on matrix size
         
-        # Perform spectral clustering
+        # Perform clustering
         kmeans = KMeans(n_clusters=n_clusters, random_state=42)
         clusters = kmeans.fit_predict(adj_matrix)
         
-        # Extended color palette for 18 groups with regional color coding
+        # Color palette remains the same
         colors = [
-            # Frontal regions (reds)
-            '#FF3366', '#FF4D4D', '#FF6B61',
-            # Temporal regions (blues)
-            '#3366FF', '#4D94FF', '#66B2FF',
-            # Parietal regions (greens)
-            '#33FF99', '#66FF66', '#99FF33',
-            # Occipital regions (purples)
-            '#9933FF', '#B266FF', '#CC99FF',
-            # Motor and sensory regions (oranges)
-            '#FF9933', '#FFB266', '#FFCC99',
-            # Deep brain regions (cyans)
-            '#33FFFF', '#66FFFF', '#99FFFF'
+            '#FF00FF', '#FF33FF', '#FF66FF',  # Neon pinks
+            '#00FFFF', '#33FFFF', '#66FFFF',  # Neon cyans
+            '#00FF00', '#33FF33', '#66FF66',  # Neon greens
+            '#FFFF00', '#FFFF33', '#FFFF66',  # Neon yellows
+            '#FF6600', '#FF9933', '#FFCC66',  # Neon oranges
+            '#6600FF', '#9933FF', '#CC66FF'   # Neon purples
         ]
         
-        # Create nodes with group information
+        # Create nodes
         nodes = []
-        max_importance = max((degrees[node] * 0.5 + betweenness[node] * 0.5) for node in G.nodes())
+        max_importance = max((degrees[node] * 0.5 + betweenness[node] * 0.5) 
+                           for node in G.nodes())
         
         for node in G.nodes():
-            group_id = int(clusters[node-1])
-            # Normalize importance to keep node sizes smaller
+            group_id = int(clusters[node])
             importance = (degrees[node] * 0.5 + betweenness[node] * 0.5) / max_importance
             nodes.append({
-                'id': node,
+                'id': node + 1,  # Add 1 to match the JS expectation
                 'group': group_id,
-                'color': colors[group_id],
+                'color': colors[group_id % len(colors)],
                 'size': 3 + (importance * 10),
                 'degree': degrees[node]
             })
         
-        # Sort links by group connectivity
+        # Create links
         links = []
         for u, v in G.edges():
             links.append({
-                'source': u,
-                'target': v,
-                'value': 1 if clusters[u-1] == clusters[v-1] else 0.5
+                'source': u + 1,  # Add 1 to match the JS expectation
+                'target': v + 1,  # Add 1 to match the JS expectation
+                'value': 1 if clusters[u] == clusters[v] else 0.5
             })
         
         return JsonResponse({
