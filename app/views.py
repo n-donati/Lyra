@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 import networkx as nx
 import numpy as np
+import pandas as pd
 from sklearn.cluster import KMeans
 from functools import lru_cache
 from network_gen import generate_matrix
@@ -223,14 +224,16 @@ def view(request):
     return render(request, 'view.html', {"matrices": matrices, "users": users})
 
 def graph(request):
-    global current_matrix
     try:
-        # Generate a larger matrix with our desired parameters
-        matrix = current_matrix
-        print(matrix)
         
-        # Convert matrix to networkx graph
-        G = nx.Graph(np.array(matrix))
+        df = pd.read_csv('data/network.csv')
+        G = nx.Graph()
+        
+        # Build graph
+        for _, row in df.iterrows():
+            source = int(row['node'])
+            targets = [int(t.strip()) for t in row['connections'].split(',')]
+            G.add_edges_from([(source, target) for target in targets])
         
         # Calculate node metrics
         degrees = dict(G.degree())
@@ -238,45 +241,51 @@ def graph(request):
         
         # Create adjacency matrix for clustering
         adj_matrix = nx.to_numpy_array(G)
-        n_clusters = min(18, len(matrix))  # Adjust clusters based on matrix size
+        n_clusters = 18  # Updated number of clusters
         
-        # Perform clustering
+        # Perform spectral clustering
         kmeans = KMeans(n_clusters=n_clusters, random_state=42)
         clusters = kmeans.fit_predict(adj_matrix)
         
-        # Color palette remains the same
+        # Extended color palette for 18 groups with regional color coding
         colors = [
-            '#FF00FF', '#FF33FF', '#FF66FF',  # Neon pinks
-            '#00FFFF', '#33FFFF', '#66FFFF',  # Neon cyans
-            '#00FF00', '#33FF33', '#66FF66',  # Neon greens
-            '#FFFF00', '#FFFF33', '#FFFF66',  # Neon yellows
-            '#FF6600', '#FF9933', '#FFCC66',  # Neon oranges
-            '#6600FF', '#9933FF', '#CC66FF'   # Neon purples
+            # Frontal regions (reds)
+            '#FF3366', '#FF4D4D', '#FF6B61',
+            # Temporal regions (blues)
+            '#3366FF', '#4D94FF', '#66B2FF',
+            # Parietal regions (greens)
+            '#33FF99', '#66FF66', '#99FF33',
+            # Occipital regions (purples)
+            '#9933FF', '#B266FF', '#CC99FF',
+            # Motor and sensory regions (oranges)
+            '#FF9933', '#FFB266', '#FFCC99',
+            # Deep brain regions (cyans)
+            '#33FFFF', '#66FFFF', '#99FFFF'
         ]
         
-        # Create nodes
+        # Create nodes with group information
         nodes = []
-        max_importance = max((degrees[node] * 0.5 + betweenness[node] * 0.5) 
-                           for node in G.nodes())
+        max_importance = max((degrees[node] * 0.5 + betweenness[node] * 0.5) for node in G.nodes())
         
         for node in G.nodes():
-            group_id = int(clusters[node])
+            group_id = int(clusters[node-1])
+            # Normalize importance to keep node sizes smaller
             importance = (degrees[node] * 0.5 + betweenness[node] * 0.5) / max_importance
             nodes.append({
-                'id': node + 1,  # Add 1 to match the JS expectation
+                'id': node,
                 'group': group_id,
-                'color': colors[group_id % len(colors)],
+                'color': colors[group_id],
                 'size': 3 + (importance * 10),
                 'degree': degrees[node]
             })
         
-        # Create links
+        # Sort links by group connectivity
         links = []
         for u, v in G.edges():
             links.append({
-                'source': u + 1,  # Add 1 to match the JS expectation
-                'target': v + 1,  # Add 1 to match the JS expectation
-                'value': 1 if clusters[u] == clusters[v] else 0.5
+                'source': u,
+                'target': v,
+                'value': 1 if clusters[u-1] == clusters[v-1] else 0.5
             })
         
         return JsonResponse({

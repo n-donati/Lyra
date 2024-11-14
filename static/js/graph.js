@@ -27,8 +27,32 @@ const zoom = d3.zoom()
         g.attr('transform', e.transform);
         // Store transform for canvas
         currentTransform = e.transform;
+        updateLabelsVisibility(currentTransform.k);
         requestAnimationFrame(render);
     });
+
+
+function updateLabelsVisibility(zoomLevel) {
+    // Escala personalizada para mostrar etiquetas basadas en el nivel de zoom
+    d3.selectAll('.node-label')
+        .style('display', d => {
+            // Mostrar solo las etiquetas de los nodos grandes en zoom bajo, y más etiquetas en zoom alto
+            if (zoomLevel > 1.2) {
+                // Mostrar todas las etiquetas
+                return 'block';
+            } else if (zoomLevel > 0.7) {
+                // Mostrar etiquetas solo de los nodos grandes
+                return d.size > 10 ? 'block' : 'none';
+            }else if (zoomLevel > 0.3) {
+                // Mostrar etiquetas solo de los nodos grandes
+                return d.size > 15 ? 'block' : 'none';
+            } else {
+                // Ocultar la mayoría de las etiquetas en zoom bajo
+                return d.size > 20 ? 'block' : 'none';
+            }
+        });
+}
+    
 
 svg.call(zoom);
 
@@ -184,6 +208,19 @@ fetch('/graph/')
                 return color.toString();
             })
             .style('filter', 'url(#glow)');
+            
+        const nodeLabels = g.append('g')
+            .selectAll('text')
+            .data(nodes)
+            .join('text')
+            .attr('class', 'node-label')
+            .attr('x', d => d.x)
+            .attr('y', d => d.y - d.size - 5) // Ajuste para que el texto esté encima del círculo
+            .attr('text-anchor', 'middle')
+            .style('fill', '#ffffff')
+            .style('display', d => d.size > 20 ? 'block' : 'none') // Visibilidad inicial
+            .text(d => "TEXT");
+
 
         // Add glow filter
         const defs = svg.append('defs');
@@ -213,6 +250,7 @@ fetch('/graph/')
                     .attr('cy', d.y);
                 requestAnimationFrame(render);
             })
+            
             .on('end', (event, d) => {
                 d3.select(event.sourceEvent.target).classed('dragging', false);
             });
