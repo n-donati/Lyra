@@ -90,6 +90,28 @@
   </div>
 {% endfor %}
 
+    <div class="color-legend">
+        <div class="legend-title">Node Types</div>
+        <div class="legend-items">
+            <div class="legend-item">
+                <div class="color-dot" style="background: #3b82f6;"></div>
+                <span>Input Nodes</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-dot" style="background: #10b981;"></div>
+                <span>Process Nodes</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-dot" style="background: #f59e0b;"></div>
+                <span>Output Nodes</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-dot" style="background: #ef4444;"></div>
+                <span>Critical Nodes</span>
+            </div>
+        </div>
+    </div>
+
     <div id="graph-container"></div>
     <script>
       feather.replace();
